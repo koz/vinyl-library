@@ -5,6 +5,7 @@ import {
   createDiscTexture,
   createSleeveTexture,
   getVinylMaps,
+  getSleevePaperMaps,
   getWoodTexture,
   loadCoverImage,
 } from './textures'
@@ -82,8 +83,8 @@ export class ShelfScene {
     160,
   ).rotateX(Math.PI / 2)
   private readonly plankGeometry = new THREE.BoxGeometry(1, 1, 1)
-  private readonly edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xcdbfa0, roughness: 0.9 })
-  private readonly backMaterial = new THREE.MeshStandardMaterial({ color: 0xd9cdb5, roughness: 0.85 })
+  private readonly edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xc9c1b1, roughness: 0.95 })
+  private readonly backMaterial = new THREE.MeshStandardMaterial({ color: 0xd9d1c1, roughness: 0.95 })
   private readonly rimMaterial = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.35 })
   private readonly woodMaterial = new THREE.MeshStandardMaterial({ map: getWoodTexture(), roughness: 0.65 })
   private readonly observer: IntersectionObserver
@@ -276,10 +277,14 @@ export class ShelfScene {
     }
     if (this.sleeves.has(element)) return
 
+    const paper = getSleevePaperMaps()
     const front = new THREE.MeshStandardMaterial({
       color: 0xc9b896,
-      roughness: 0.82,
-      envMapIntensity: 0.55,
+      roughness: 1,
+      roughnessMap: paper.roughness,
+      bumpMap: paper.bump,
+      bumpScale: 0.3,
+      envMapIntensity: 0.3,
     })
     const body = new THREE.Mesh(this.sleeveGeometry, [
       this.edgeMaterial,

@@ -3,7 +3,7 @@ import { RECORD_RADIUS } from './layout'
 
 const LABEL_RATIO = 1 / 3
 
-const COVER_SIZE = 512
+const COVER_SIZE = 1024
 const DISC_SIZE = 1024
 const ANISOTROPY_SIZE = 512
 
@@ -50,8 +50,9 @@ function paperGrain(): HTMLCanvasElement {
   if (grainCanvas) return grainCanvas
   const { element, context } = canvas(128)
   const image = context.createImageData(128, 128)
+  const random = seededRandom(1948)
   for (let i = 0; i < image.data.length; i += 4) {
-    const value = 128 + (Math.random() - 0.5) * 110
+    const value = 128 + (random() - 0.5) * 110
     image.data[i] = image.data[i + 1] = image.data[i + 2] = value
     image.data[i + 3] = 255
   }
@@ -60,21 +61,84 @@ function paperGrain(): HTMLCanvasElement {
   return element
 }
 
-// Paper grain, scuffed edges and a little yellowing.
+type SleevePaperMaps = {
+  bump: THREE.CanvasTexture
+  roughness: THREE.CanvasTexture
+}
+
+let sleevePaperMaps: SleevePaperMaps | null = null
+
+/** Shared uncoated paper relief: soft pulp variation, fine grain and short, irregular fibers. */
+export function getSleevePaperMaps(): SleevePaperMaps {
+  if (sleevePaperMaps) return sleevePaperMaps
+  const random = seededRandom(1976)
+  const surface = canvas(COVER_SIZE)
+  const pulp = canvas(64)
+  const pulpImage = pulp.context.createImageData(64, 64)
+  for (let i = 0; i < pulpImage.data.length; i += 4) {
+    const value = 112 + random() * 32
+    pulpImage.data[i] = pulpImage.data[i + 1] = pulpImage.data[i + 2] = value
+    pulpImage.data[i + 3] = 255
+  }
+  pulp.context.putImageData(pulpImage, 0, 0)
+  surface.context.drawImage(pulp.element, 0, 0, COVER_SIZE, COVER_SIZE)
+  surface.context.globalCompositeOperation = 'soft-light'
+  surface.context.globalAlpha = 0.55
+  surface.context.fillStyle = surface.context.createPattern(paperGrain(), 'repeat') ?? '#888'
+  surface.context.fillRect(0, 0, COVER_SIZE, COVER_SIZE)
+  surface.context.globalCompositeOperation = 'source-over'
+  surface.context.globalAlpha = 1
+  surface.context.lineCap = 'round'
+  for (let i = 0; i < 9000; i++) {
+    const x = random() * COVER_SIZE
+    const y = random() * COVER_SIZE
+    const angle = random() * Math.PI * 2
+    const length = 2 + random() * 9
+    surface.context.strokeStyle = random() < 0.5 ? 'rgba(65,65,65,0.13)' : 'rgba(205,205,205,0.16)'
+    surface.context.lineWidth = 0.5 + random() * 0.7
+    surface.context.beginPath()
+    surface.context.moveTo(x, y)
+    surface.context.lineTo(x + Math.cos(angle) * length, y + Math.sin(angle) * length)
+    surface.context.stroke()
+  }
+
+  const roughness = canvas(COVER_SIZE)
+  const roughImage = surface.context.getImageData(0, 0, COVER_SIZE, COVER_SIZE)
+  for (let i = 0; i < roughImage.data.length; i += 4) {
+    const value = 225 + (roughImage.data[i]! - 128) * 0.35
+    roughImage.data[i] = roughImage.data[i + 1] = roughImage.data[i + 2] = value
+  }
+  roughness.context.putImageData(roughImage, 0, 0)
+  // These are surface data, so keep the textures in their default linear color space.
+  sleevePaperMaps = {
+    bump: new THREE.CanvasTexture(surface.element),
+    roughness: new THREE.CanvasTexture(roughness.element),
+  }
+  return sleevePaperMaps
+}
+
+// Printed paper, gently compressed folds and small patches of exposed cardboard.
 function ageSleeve(context: CanvasRenderingContext2D, seed: number) {
   const size = context.canvas.width
   const random = seededRandom(seed)
   context.save()
 
-  context.globalCompositeOperation = 'overlay'
-  context.globalAlpha = 0.14
-  context.fillStyle = context.createPattern(paperGrain(), 'repeat') ?? '#888'
+  const { bump } = getSleevePaperMaps()
+  context.globalCompositeOperation = 'soft-light'
+  context.globalAlpha = 0.28
+  context.drawImage(bump.image, 0, 0, size, size)
+
+  // A little ink absorption also affects near-white artwork, where overlay grain disappears.
+  context.globalCompositeOperation = 'multiply'
+  context.globalAlpha = 0.07
+  context.drawImage(bump.image, 0, 0, size, size)
+  context.globalAlpha = 0.1
+  context.fillStyle = '#e8e1d3'
   context.fillRect(0, 0, size, size)
 
-  context.globalCompositeOperation = 'screen'
   context.globalAlpha = 1
-  const edge = size * 0.035
-  const edgeAlpha = 0.08 + random() * 0.08
+  const edge = size * 0.014
+  const edgeAlpha = 0.19 + random() * 0.07
   const edges: [number, number, number, number][] = [
     [0, 0, 0, edge],
     [0, size, 0, size - edge],
@@ -83,16 +147,32 @@ function ageSleeve(context: CanvasRenderingContext2D, seed: number) {
   ]
   for (const [x0, y0, x1, y1] of edges) {
     const gradient = context.createLinearGradient(x0, y0, x1, y1)
-    gradient.addColorStop(0, `rgba(255,255,255,${edgeAlpha})`)
-    gradient.addColorStop(1, 'rgba(255,255,255,0)')
+    gradient.addColorStop(0, `rgba(94,81,62,${edgeAlpha})`)
+    gradient.addColorStop(0.2, 'rgba(94,81,62,0.07)')
+    gradient.addColorStop(1, 'rgba(94,81,62,0)')
     context.fillStyle = gradient
     context.fillRect(0, 0, size, size)
   }
 
-  context.globalCompositeOperation = 'multiply'
-  context.globalAlpha = 0.06
-  context.fillStyle = '#d8c49a'
-  context.fillRect(0, 0, size, size)
+  // The thin folded rim defines white borders without adding a graphic outline.
+  context.strokeStyle = 'rgba(88,76,58,0.26)'
+  context.lineWidth = 1.5
+  context.strokeRect(0.75, 0.75, size - 1.5, size - 1.5)
+  context.globalCompositeOperation = 'source-over'
+  context.strokeStyle = 'rgba(235,226,207,0.3)'
+  for (let i = 0; i < 55; i++) {
+    context.save()
+    context.translate(size / 2, size / 2)
+    context.rotate(Math.floor(random() * 4) * Math.PI / 2)
+    const x = (random() - 0.5) * size
+    const y = -size / 2 + random() * 2
+    context.lineWidth = 0.5 + random() * 1.3
+    context.beginPath()
+    context.moveTo(x, y)
+    context.lineTo(x + 2 + random() * 12, y + random() * 1.5)
+    context.stroke()
+    context.restore()
+  }
   context.restore()
 }
 
