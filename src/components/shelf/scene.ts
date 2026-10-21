@@ -476,8 +476,8 @@ export class ShelfScene {
       { left: stage.left, bottom: stage.bottom, width: stage.height },
       FRONT_Z,
     )
-    front.rx = 0.03
-    front.ry = -0.14
+    front.rx = 0
+    front.ry = -0.05
 
     const t = easeInOut(selection.travel)
     // Pull straight off the plank before moving toward the stage. Reversing this

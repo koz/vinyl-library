@@ -73,7 +73,8 @@ describe('hover tilt when pulling a sleeve forward', () => {
       }
       expect(selection.sleeve.group.position.z).toBeGreaterThan(80)
       for (let i = 0; i < 33; i++) scene.update(1 / 60)
-      expect(selection.sleeve.group.rotation.x).toBeCloseTo(0.03, 10)
+      expect(selection.sleeve.group.rotation.x).toBeCloseTo(0, 10)
+      expect(selection.sleeve.group.rotation.y).toBeCloseTo(-0.05, 10)
     })
   }
 })
