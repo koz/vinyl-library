@@ -60,7 +60,16 @@ export function rankSpotifyAlbums(query: AlbumQuery, albums: SpotifyAlbum[]): Al
 export function suggestedSpotifyAlbum(candidates: AlbumCandidate[]): string | null {
   const first = candidates[0]
   if (!first?.exact) return null
-  const second = candidates[1]
+  const artists = first.artists.map(normalize).sort()
+  // Separate Spotify IDs can describe the same album. Compare the first listing
+  // with the next distinct album so duplicate entries don't create a false tie.
+  const second = candidates.slice(1).find((candidate) => {
+    const otherArtists = candidate.artists.map(normalize).sort()
+    return normalize(candidate.name) !== normalize(first.name) ||
+      candidate.year !== first.year ||
+      otherArtists.length !== artists.length ||
+      otherArtists.some((artist, index) => artist !== artists[index])
+  })
   return !second || first.score - second.score >= 0.08 ? first.id : null
 }
 
