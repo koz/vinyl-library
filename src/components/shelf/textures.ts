@@ -253,8 +253,8 @@ function bandNoise(index: number): number {
   return x - Math.floor(x)
 }
 
-function grooveAt(f: number): number {
-  const position = f * GROOVE_BANDS
+function grooveAt(f: number, bands = GROOVE_BANDS): number {
+  const position = f * bands
   const index = Math.floor(position)
   const t = position - index
   const smooth = t * t * (3 - 2 * t)
@@ -280,7 +280,7 @@ const GAP: Zone = { roughness: 0.25, anisotropy: 0.4 }
 // The groove sheen is kept fairly broad and every change is a soft ramp a few pixels wide:
 // a razor-sharp highlight or one-pixel edges make the record shimmer as it slides.
 function zoneAt(f: number): Zone {
-  const grooves: Zone = { roughness: 0.5 + grooveAt(f) * 0.04, anisotropy: 0.9 }
+  const grooves: Zone = { roughness: 0.32 + grooveAt(f) * 0.075, anisotropy: 0.9 }
   const gap = Math.max(...TRACK_GAPS.map((center) => 1 - smoothstep(0, GAP_WIDTH, Math.abs(f - center))))
   let zone = mix(grooves, GAP, gap)
   zone = mix(DEAD_WAX, zone, smoothstep(GROOVES_START - ZONE_RAMP, GROOVES_START, f))
@@ -291,6 +291,7 @@ function zoneAt(f: number): Zone {
 type VinylMaps = {
   base: HTMLCanvasElement
   roughness: THREE.CanvasTexture
+  normal: THREE.CanvasTexture
   anisotropy: THREE.DataTexture
 }
 
@@ -301,50 +302,102 @@ export function getVinylMaps(): VinylMaps {
   const random = seededRandom(33)
   const half = DISC_SIZE / 2
 
-  // Near-black vinyl with faint groove banding, plus dust and hairline scratches so the spin reads.
+  // Pressed vinyl is almost black; its groove detail comes mostly from the reflection, not gray rings.
   const base = canvas(DISC_SIZE)
   const roughness = canvas(DISC_SIZE)
+  const normal = canvas(DISC_SIZE)
   const baseImage = base.context.createImageData(DISC_SIZE, DISC_SIZE)
   const roughImage = roughness.context.createImageData(DISC_SIZE, DISC_SIZE)
+  const normalImage = normal.context.createImageData(DISC_SIZE, DISC_SIZE)
   for (let y = 0; y < DISC_SIZE; y++) {
     for (let x = 0; x < DISC_SIZE; x++) {
-      const f = Math.hypot(x + 0.5 - half, y + 0.5 - half) / half
+      const dx = x + 0.5 - half
+      const dy = y + 0.5 - half
+      const radius = Math.hypot(dx, dy) || 1
+      const f = radius / half
+      const angle = Math.atan2(dy, dx)
       const zone = zoneAt(f)
-      const shade = 10 + (f >= GROOVES_START && f <= GROOVES_END ? grooveAt(f) * 2 : 0)
+      const recorded = smoothstep(GROOVES_START, GROOVES_START + ZONE_RAMP, f)
+        * (1 - smoothstep(GROOVES_END - ZONE_RAMP, GROOVES_END, f))
+      const fine = grooveAt(f, 173)
+      // Slow changes in the pressing break up the otherwise perfectly circular sheen.
+      const pressing = Math.sin(angle * 3 + f * 17) * Math.sin(angle * 5 - f * 9)
+      const grain = random() - 0.5
+      const shade = 7 + recorded * (grooveAt(f) * 1.7 + fine * 0.8 + pressing * 0.35) + grain * 0.8
       const i = (y * DISC_SIZE + x) * 4
       baseImage.data[i] = baseImage.data[i + 1] = baseImage.data[i + 2] = shade
       baseImage.data[i + 3] = 255
-      roughImage.data[i] = roughImage.data[i + 1] = roughImage.data[i + 2] = zone.roughness * 255
+      roughImage.data[i] = roughImage.data[i + 1] = roughImage.data[i + 2] =
+        (zone.roughness + recorded * (pressing * 0.023 + (fine - 0.5) * 0.025)) * 255
       roughImage.data[i + 3] = 255
+
+      // Small radial slopes catch the light like grooves. Mipmapped normals let the fine
+      // detail fade naturally at a distance rather than turning into moving white lines.
+      const slope = recorded * (
+        grooveAt(f + 1 / half) - grooveAt(f - 1 / half)
+        + (grooveAt(f + 1 / half, 173) - grooveAt(f - 1 / half, 173)) * 0.45
+      ) * 0.24
+      const length = Math.hypot(slope, 1)
+      normalImage.data[i] = 127.5 - dx / radius * slope / length * 127.5
+      normalImage.data[i + 1] = 127.5 + dy / radius * slope / length * 127.5
+      normalImage.data[i + 2] = 127.5 + 127.5 / length
+      normalImage.data[i + 3] = 255
     }
   }
   base.context.putImageData(baseImage, 0, 0)
   roughness.context.putImageData(roughImage, 0, 0)
+  normal.context.putImageData(normalImage, 0, 0)
 
-  base.context.fillStyle = 'rgba(210,205,195,0.35)'
-  for (let i = 0; i < 160; i++) {
+  base.context.fillStyle = 'rgba(185,180,168,0.2)'
+  for (let i = 0; i < 95; i++) {
     const angle = random() * Math.PI * 2
     const f = LABEL_RATIO + 0.02 + random() * (1 - LABEL_RATIO - 0.03)
-    const r = 0.6 + random() * 1.1
+    const r = 0.4 + random() * 0.8
     base.context.beginPath()
     base.context.arc(half + Math.cos(angle) * f * half, half + Math.sin(angle) * f * half, r, 0, Math.PI * 2)
     base.context.fill()
   }
-  base.context.strokeStyle = 'rgba(200,200,200,0.07)'
-  base.context.lineWidth = 1
-  for (let i = 0; i < 6; i++) {
+  // Faint cleaning marks follow short arcs instead of looking like drawn full-circle track rings.
+  for (let i = 0; i < 55; i++) {
     const angle = random() * Math.PI * 2
-    const f = 0.5 + random() * 0.4
+    const f = 0.43 + random() * 0.51
+    base.context.strokeStyle = `rgba(155,155,150,${0.018 + random() * 0.025})`
+    base.context.lineWidth = 0.6 + random() * 0.7
     base.context.beginPath()
     base.context.arc(
-      half + Math.cos(angle) * half * 0.2,
-      half + Math.sin(angle) * half * 0.2,
+      half,
+      half,
       f * half,
       angle,
-      angle + 0.3 + random() * 0.5,
+      angle + 0.08 + random() * 0.55,
     )
     base.context.stroke()
   }
+
+  // Broad, almost invisible handling marks disturb the reflected light without painting
+  // fingerprints onto the artwork. Keep the paper label and outer rim untouched.
+  roughness.context.save()
+  roughness.context.beginPath()
+  roughness.context.arc(half, half, half * 0.96, 0, Math.PI * 2)
+  roughness.context.arc(half, half, half * GROOVES_START, 0, Math.PI * 2, true)
+  roughness.context.clip()
+  for (let i = 0; i < 7; i++) {
+    const angle = random() * Math.PI * 2
+    const radius = half * (0.52 + random() * 0.4)
+    roughness.context.save()
+    roughness.context.translate(half + Math.cos(angle) * radius, half + Math.sin(angle) * radius)
+    roughness.context.rotate(angle + random())
+    roughness.context.scale(1, 0.35 + random() * 0.3)
+    const width = 35 + random() * 50
+    const smudge = roughness.context.createRadialGradient(0, 0, 0, 0, 0, width)
+    smudge.addColorStop(0, 'rgba(180,180,180,0.17)')
+    smudge.addColorStop(0.5, 'rgba(180,180,180,0.07)')
+    smudge.addColorStop(1, 'rgba(180,180,180,0)')
+    roughness.context.fillStyle = smudge
+    roughness.context.fillRect(-width, -width, width * 2, width * 2)
+    roughness.context.restore()
+  }
+  roughness.context.restore()
 
   // Grooves are concentric, so the highlight stretches along circles: the tangent of each point.
   const data = new Uint8Array(ANISOTROPY_SIZE * ANISOTROPY_SIZE * 4)
@@ -369,6 +422,7 @@ export function getVinylMaps(): VinylMaps {
   vinylMaps = {
     base: base.element,
     roughness: new THREE.CanvasTexture(roughness.element),
+    normal: new THREE.CanvasTexture(normal.element),
     anisotropy,
   }
   return vinylMaps

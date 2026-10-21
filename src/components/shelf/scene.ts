@@ -183,17 +183,20 @@ export class ShelfScene {
     const sleeve = [...this.sleeves.values()].find((candidate) => candidate.info.id === id)
     if (!sleeve || this.selection) return
 
-    const { roughness, anisotropy } = getVinylMaps()
+    const { roughness, normal, anisotropy } = getVinylMaps()
     const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy()
     const material = new THREE.MeshPhysicalMaterial({
       map: createDiscTexture(sleeve.texture?.image ?? null, maxAnisotropy),
       roughnessMap: roughness,
       roughness: 1,
+      normalMap: normal,
+      normalScale: new THREE.Vector2(0.4, 0.4),
       metalness: 0,
       anisotropy: 0.8,
       anisotropyMap: anisotropy,
-      clearcoat: 0.35,
-      clearcoatRoughness: 0.12,
+      clearcoat: 0.24,
+      clearcoatRoughness: 0.6,
+      clearcoatRoughnessMap: roughness,
     })
     const disc = new THREE.Mesh(this.discGeometry, [this.rimMaterial, material, material])
     disc.position.y = 0.5
