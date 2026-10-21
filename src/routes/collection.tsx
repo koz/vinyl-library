@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
+import { VinylShelf } from '../components/shelf/VinylShelf'
 import { sortItems, type CollectionItem, type ImportedItem } from '../lib/collection'
 import { deleteAllCollections, loadCollection, saveCollection } from '../lib/collection-cache'
 import { fetchCollectionPage, getViewer, signOut, type ImportError } from '../server/functions'
@@ -34,6 +35,7 @@ function CollectionPage() {
   const [visible, setVisible] = useState(PAGE_SIZE)
   const [status, setStatus] = useState<ImportStatus>({ state: 'idle' })
   const [needsReauth, setNeedsReauth] = useState(false)
+  const [shelfSupported, setShelfSupported] = useState(true)
   const importRun = useRef(0)
 
   // Discogs can't filter vinyl or sort by artist, so every page is read before the list is replaced.
@@ -140,6 +142,11 @@ function CollectionPage() {
             <UpdateNotice status={status} needsReauth={needsReauth} onRetry={runImport} />
             {items.length === 0 ? (
               <p className="empty">There’s no vinyl in your Discogs collection yet.</p>
+            ) : shelfSupported ? (
+              <VinylShelf
+                items={items.slice(0, visible)}
+                onUnsupported={() => setShelfSupported(false)}
+              />
             ) : (
               <RecordList items={items.slice(0, visible)} />
             )}

@@ -28,6 +28,14 @@
   box-sizing: border-box;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
+html.stage-open {
+  overflow: hidden;
+}
+
 body {
   margin: 0;
 }
@@ -319,6 +327,193 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Shelf: the slots and planks are invisible layout; the canvas draws the records over them. */
+
+.shelf-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.shelf {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  column-gap: clamp(14px, 3vw, 28px);
+  padding-top: 56px;
+}
+
+.shelf-slot {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.shelf-plank {
+  grid-column: 1 / -1;
+  height: 16px;
+  margin: 0 -12px 72px;
+}
+
+.shelf:not(.shelf-ready) .shelf-slot {
+  background: var(--cover-bg);
+}
+
+.shelf:not(.shelf-ready) .shelf-plank {
+  border-radius: 2px;
+  background: #a37a50;
+}
+
+.shelf-card {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  z-index: 3;
+  display: grid;
+  gap: 2px;
+  width: max-content;
+  max-width: 240px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(45 43 40 / 0.12);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  text-align: left;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: card-in 0.15s ease-out;
+}
+
+.shelf-card-title {
+  font-weight: 600;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4px);
+  }
+}
+
+/* Stage: the selected record at the front, with its details */
+
+.stage {
+  --stage-h: min(62vh, 560px, calc((100vw - 460px) / var(--stage-aspect)));
+
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(24px, 5vw, 64px);
+  padding: 24px;
+}
+
+.stage-closing {
+  pointer-events: none;
+}
+
+.stage-backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.stage-art {
+  position: relative;
+  flex: none;
+  width: calc(var(--stage-h) * var(--stage-aspect));
+  height: var(--stage-h);
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.stage-details {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  width: min(300px, 100%);
+  animation: details-in 0.4s ease-out 0.75s both;
+}
+
+.stage-closing .stage-details {
+  animation: details-out 0.2s ease-in both;
+}
+
+.stage-details h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.stage-artist {
+  font-weight: 500;
+}
+
+.stage-facts {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 8px;
+}
+
+.stage-facts div {
+  display: flex;
+  gap: 12px;
+}
+
+.stage-facts dt {
+  width: 56px;
+  flex: none;
+  color: var(--muted);
+}
+
+.stage-facts dd {
+  margin: 0;
+}
+
+@keyframes details-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+@keyframes details-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 719px) {
+  .stage {
+    --stage-h: min(46vh, calc((100vw - 48px) / var(--stage-aspect)));
+
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf-card,
+  .stage-details,
+  .stage-closing .stage-details {
+    animation: none;
+  }
 }
 
 .load-more {

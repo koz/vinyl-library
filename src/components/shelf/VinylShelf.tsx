@@ -1,0 +1,295 @@
+import {
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FocusEvent,
+  type PointerEvent,
+} from 'react'
+import type { CollectionItem } from '../../lib/collection'
+import { STAGE_ASPECT, columnsFor } from './layout'
+import type { ShelfScene } from './scene'
+
+type Stage = { item: CollectionItem; closing: boolean }
+
+/**
+ * The collection as records standing on wooden shelves, drawn in WebGL. Calls `onUnsupported`
+ * if the browser can't create a WebGL context, so the page can fall back to a plain list.
+ */
+export function VinylShelf({
+  items,
+  onUnsupported,
+}: {
+  items: CollectionItem[]
+  onUnsupported: () => void
+}) {
+  const shelfRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [scene, setScene] = useState<ShelfScene | null>(null)
+  const [columns, setColumns] = useState(5)
+  const [hovered, setHovered] = useState<number | null>(null)
+  const [stage, setStage] = useState<Stage | null>(null)
+  const returnFocus = useRef<HTMLElement | null>(null)
+  const unsupported = useRef(onUnsupported)
+  unsupported.current = onUnsupported
+  // Read by the Escape listener and the close animation callback, which outlive a render.
+  const latest = useRef({ stage, scene })
+  latest.current = { stage, scene }
+
+  // three.js is loaded only when the shelf is shown.
+  useEffect(() => {
+    let cancelled = false
+    let instance: ShelfScene | null = null
+    import('./scene').then(
+      ({ ShelfScene }) => {
+        if (cancelled || !canvasRef.current) return
+        try {
+          instance = new ShelfScene(canvasRef.current)
+        } catch (error) {
+          console.error('Could not start the 3D shelf', error)
+          unsupported.current()
+          return
+        }
+        setScene(instance)
+      },
+      () => {
+        if (!cancelled) unsupported.current()
+      },
+    )
+    return () => {
+      cancelled = true
+      instance?.dispose()
+    }
+  }, [])
+
+  useEffect(() => {
+    const shelf = shelfRef.current
+    if (!shelf) return
+    const observer = new ResizeObserver(() => {
+      setColumns(columnsFor(shelf.clientWidth))
+      scene?.requestRender()
+    })
+    observer.observe(shelf)
+    // Content above the shelf (notices, progress) can move it without a scroll.
+    observer.observe(document.body)
+    return () => observer.disconnect()
+  }, [scene])
+
+  useEffect(() => {
+    if (!stage) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeStage()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    document.documentElement.classList.add('stage-open')
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.documentElement.classList.remove('stage-open')
+    }
+  }, [stage !== null])
+
+  function openStage(item: CollectionItem, slot: HTMLElement) {
+    if (stage) return
+    returnFocus.current = slot
+    scene?.hover(null)
+    setHovered(null)
+    setStage({ item, closing: false })
+  }
+
+  function closeStage() {
+    const current = latest.current
+    if (!current.stage || current.stage.closing) return
+    current.stage = { ...current.stage, closing: true }
+    setStage(current.stage)
+    const finish = () => {
+      setStage(null)
+      returnFocus.current?.focus({ preventScroll: true })
+    }
+    if (current.scene) current.scene.close(finish)
+    else finish()
+  }
+
+  const rows: CollectionItem[][] = []
+  for (let i = 0; i < items.length; i += columns) rows.push(items.slice(i, i + columns))
+
+  return (
+    <>
+      <canvas ref={canvasRef} className="shelf-canvas" aria-hidden="true" />
+      <div
+        ref={shelfRef}
+        className={`shelf${scene ? ' shelf-ready' : ''}`}
+        style={{ '--columns': columns } as CSSProperties}
+      >
+        {rows.map((row, index) => (
+          <Fragment key={index}>
+            {row.map((item) => (
+              <Slot
+                key={item.instanceId}
+                item={item}
+                scene={scene}
+                showCard={hovered === item.instanceId && !stage}
+                onHover={setHovered}
+                onOpen={openStage}
+              />
+            ))}
+            <Plank scene={scene} />
+          </Fragment>
+        ))}
+      </div>
+      {stage && (
+        <StageView
+          stage={stage}
+          scene={scene}
+          onClose={closeStage}
+        />
+      )}
+    </>
+  )
+}
+
+function Slot({
+  item,
+  scene,
+  showCard,
+  onHover,
+  onOpen,
+}: {
+  item: CollectionItem
+  scene: ShelfScene | null
+  showCard: boolean
+  onHover: (id: number | null) => void
+  onOpen: (item: CollectionItem, slot: HTMLElement) => void
+}) {
+  const ref = useRef<HTMLButtonElement>(null)
+  const coverUrl = item.coverUrl ?? item.thumbUrl
+
+  useEffect(() => {
+    if (!scene || !ref.current) return
+    return scene.trackSleeve(ref.current, {
+      id: item.instanceId,
+      artist: item.artist,
+      title: item.title,
+      coverUrl,
+    })
+  }, [scene, item.instanceId, item.artist, item.title, coverUrl])
+
+  function handlePointerMove(event: PointerEvent<HTMLButtonElement>) {
+    if (event.pointerType === 'touch') return
+    scene?.hover(item.instanceId)
+    onHover(item.instanceId)
+  }
+
+  function handleLeave() {
+    scene?.hover(null)
+    onHover(null)
+  }
+
+  function handleFocus(event: FocusEvent<HTMLButtonElement>) {
+    if (!event.currentTarget.matches(':focus-visible')) return
+    scene?.hover(item.instanceId)
+    onHover(item.instanceId)
+  }
+
+  return (
+    <button
+      ref={ref}
+      className="shelf-slot"
+      type="button"
+      aria-label={`${item.title} by ${item.artist}`}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handleLeave}
+      onFocus={handleFocus}
+      onBlur={handleLeave}
+      onClick={(event) => onOpen(item, event.currentTarget)}
+    >
+      {showCard && (
+        <span className="shelf-card" aria-hidden="true">
+          <span className="shelf-card-title">{item.title}</span>
+          <span className="shelf-card-artist">{item.artist}</span>
+          <span className="shelf-card-meta muted">
+            {[item.year ?? 'Unknown year', item.genre].filter(Boolean).join(' · ')}
+          </span>
+        </span>
+      )}
+    </button>
+  )
+}
+
+function Plank({ scene }: { scene: ShelfScene | null }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!scene || !ref.current) return
+    return scene.trackPlank(ref.current)
+  }, [scene])
+  return <div ref={ref} className="shelf-plank" aria-hidden="true" />
+}
+
+function StageView({
+  stage,
+  scene,
+  onClose,
+}: {
+  stage: Stage
+  scene: ShelfScene | null
+  onClose: () => void
+}) {
+  const artRef = useRef<HTMLButtonElement>(null)
+  const { item } = stage
+
+  useLayoutEffect(() => {
+    if (!artRef.current) return
+    scene?.open(item.instanceId, artRef.current)
+    artRef.current.focus({ preventScroll: true })
+  }, [])
+
+  return (
+    <div
+      className={`stage${stage.closing ? ' stage-closing' : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="stage-title"
+      style={{ '--stage-aspect': STAGE_ASPECT } as CSSProperties}
+    >
+      <div className="stage-backdrop" onClick={onClose} />
+      <button
+        ref={artRef}
+        className="stage-art"
+        type="button"
+        aria-label={`Put ${item.title} back on the shelf`}
+        onClick={onClose}
+      />
+      <section className="stage-details">
+        <p className="stage-artist">
+          {item.artist}
+          {item.artistAlt && <span className="muted"> · {item.artistAlt}</span>}
+        </p>
+        <h2 id="stage-title">{item.title}</h2>
+        <dl className="stage-facts">
+          <div>
+            <dt>Year</dt>
+            <dd>{item.year ?? 'Unknown'}</dd>
+          </div>
+          <div>
+            <dt>Genre</dt>
+            <dd>{item.genre || 'No genre'}</dd>
+          </div>
+        </dl>
+        <div className="actions">
+          <a
+            className="button"
+            href={`https://www.discogs.com/release/${item.releaseId}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            View on Discogs
+          </a>
+          <button className="button" type="button" onClick={onClose}>
+            Back to shelf
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
