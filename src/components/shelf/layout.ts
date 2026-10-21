@@ -8,7 +8,6 @@ export const EXPOSED = 0.3
 export const STAGE_ASPECT = 1 + RECORD_RADIUS * 2 * EXPOSED
 
 export function columnsFor(width: number): number {
-  if (width >= 860) return 5
   if (width >= 620) return 4
   if (width >= 420) return 3
   return 2

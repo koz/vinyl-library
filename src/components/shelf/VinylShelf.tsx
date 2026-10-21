@@ -29,7 +29,7 @@ export function VinylShelf({
   const shelfRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [scene, setScene] = useState<ShelfScene | null>(null)
-  const [columns, setColumns] = useState(5)
+  const [columns, setColumns] = useState(4)
   const [stage, setStage] = useState<Stage | null>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const unsupported = useRef(onUnsupported)
