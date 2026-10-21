@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { WebGPURenderer, PMREMGenerator } from 'three/webgpu'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { EXPOSED, RECORD_RADIUS } from './layout'
-import { createSleeveGeometry, setPlankGrainUVs } from './geometry'
+import { createPlankGeometry, createSleeveGeometry } from './geometry'
 import { createWoodMaterial } from './wood-material'
 import {
   createDiscTexture,
@@ -88,7 +88,6 @@ export class ShelfScene {
     RECORD_THICKNESS,
     160,
   ).rotateX(Math.PI / 2)
-  private readonly plankGeometry = new THREE.BoxGeometry(1, 1, 1)
   private readonly edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xc9c1b1, roughness: 0.95 })
   private readonly backMaterial = new THREE.MeshStandardMaterial({ color: 0xd9d1c1, roughness: 0.95 })
   private readonly rimMaterial = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.35 })
@@ -273,7 +272,6 @@ export class ShelfScene {
     for (const element of [...this.sleeves.keys(), ...this.planks.keys()]) this.deactivate(element)
     this.sleeveGeometry.dispose()
     this.discGeometry.dispose()
-    this.plankGeometry.dispose()
     for (const material of [
       this.edgeMaterial, this.backMaterial, this.rimMaterial,
     ]) {
@@ -302,7 +300,7 @@ export class ShelfScene {
     if (info === 'plank') {
       if (this.planks.has(element)) return
       const wood = createWoodMaterial(this.oak, this.woodNodes, this.plankOffsets.get(element)!)
-      const plank = new THREE.Mesh(this.plankGeometry.clone(), wood.material)
+      const plank = new THREE.Mesh(new THREE.BoxGeometry(), wood.material)
       this.plankMaterials.set(element, wood)
       plank.castShadow = true
       plank.receiveShadow = true
@@ -488,7 +486,8 @@ export class ShelfScene {
       )
       plank.scale.set(rect.width, rect.height, PLANK_DEPTH)
       if (plank.userData.width !== rect.width || plank.userData.height !== rect.height) {
-        setPlankGrainUVs(plank.geometry as THREE.BoxGeometry, rect.width, rect.height, PLANK_DEPTH)
+        plank.geometry.dispose()
+        plank.geometry = createPlankGeometry(rect.width, rect.height, PLANK_DEPTH)
         plank.userData.width = rect.width
         plank.userData.height = rect.height
       }

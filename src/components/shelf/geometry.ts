@@ -1,5 +1,45 @@
 import * as THREE from 'three'
 
+/** Rounded timber corners with a smaller, soft edge around the top and bottom. */
+export function createPlankGeometry(width: number, height: number, depth: number): THREE.BoxGeometry {
+  const geometry = new THREE.BoxGeometry(1, 1, 1, 17, 9, 17)
+  const positions = geometry.getAttribute('position')
+  const smoothNormals = new Float32Array(positions.count * 3)
+  const corner = Math.min(14, width / 2, depth / 2)
+  const edge = Math.min(2, height / 2, corner)
+  const dimensions = new THREE.Vector3(width, height, depth)
+  const direction = new THREE.Vector3()
+  const horizontal = new THREE.Vector2()
+
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i)
+    const y = positions.getY(i)
+    const z = positions.getZ(i)
+    // Odd segment counts leave a flat span between the curved ends on each axis.
+    direction.set(
+      x - Math.sign(x) * 0.5 / 17,
+      y - Math.sign(y) * 0.5 / 9,
+      z - Math.sign(z) * 0.5 / 17,
+    )
+    horizontal.set(direction.x, direction.z).normalize()
+    direction.normalize()
+    positions.setXYZ(i,
+      (Math.sign(x) * (width / 2 - corner) + horizontal.x * (corner - edge) + direction.x * edge) / width,
+      (Math.sign(y) * (height / 2 - edge) + direction.y * edge) / height,
+      (Math.sign(z) * (depth / 2 - corner) + horizontal.y * (corner - edge) + direction.z * edge) / depth,
+    )
+    // The mesh scales a unit plank to its DOM dimensions; compensate its normals here.
+    direction.multiply(dimensions).normalize().toArray(smoothNormals, i * 3)
+  }
+
+  // Use the original box face directions to keep the grain aligned across the curves.
+  setPlankGrainUVs(geometry, width, height, depth)
+  geometry.setAttribute('normal', new THREE.BufferAttribute(smoothNormals, 3))
+  geometry.computeBoundingBox()
+  geometry.computeBoundingSphere()
+  return geometry
+}
+
 /** A texture tile covers the same area of timber on the top, front and sides. */
 export function setPlankGrainUVs(geometry: THREE.BoxGeometry, width: number, height: number, depth: number) {
   const positions = geometry.getAttribute('position')
