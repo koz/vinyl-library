@@ -6,6 +6,7 @@ import { ButtonLabel } from '../components/ButtonLabel'
 import { VinylShelf } from '../components/shelf/VinylShelf'
 import { sortItems, type CollectionItem, type ImportedItem } from '../lib/collection'
 import { deleteAllCollections, loadCollection, saveCollection } from '../lib/collection-cache'
+import { deleteSpotifyMatches } from '../lib/spotify'
 import { fetchCollectionPage, getViewer, signOut, type ImportError } from '../server/functions'
 
 const PAGE_SIZE = 50
@@ -120,6 +121,7 @@ function CollectionPage() {
     importRun.current++
     await callSignOut()
     await deleteAllCollections()
+    deleteSpotifyMatches()
     await navigate({ to: '/' })
   }
 

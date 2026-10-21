@@ -10,6 +10,7 @@ import {
 } from 'react'
 import type { CollectionItem } from '../../lib/collection'
 import { ButtonLabel } from '../ButtonLabel'
+import { SpotifyAlbumPrototype } from '../SpotifyAlbumPrototype'
 import { STAGE_ASPECT, columnsFor } from './layout'
 import type { ShelfScene } from './scene'
 
@@ -272,6 +273,7 @@ function StageView({
             <ButtonLabel>View on Discogs</ButtonLabel>
           </a>
         </div>
+        <SpotifyAlbumPrototype key={item.releaseId} item={item} active={!stage.closing} />
       </section>
     </div>
   )

@@ -5,6 +5,9 @@ type Env = {
   discogsConsumerSecret: string
   discogsUserAgent: string
   encryptionKey: Buffer
+  spotifyClientId: string | undefined
+  spotifyClientSecret: string | undefined
+  spotifyMarket: string
 }
 
 let cached: Env | undefined
@@ -38,6 +41,9 @@ export function getEnv(): Env {
     discogsConsumerSecret: required('DISCOGS_CONSUMER_SECRET'),
     discogsUserAgent: required('DISCOGS_USER_AGENT'),
     encryptionKey,
+    spotifyClientId: process.env.SPOTIFY_CLIENT_ID?.trim() || undefined,
+    spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET?.trim() || undefined,
+    spotifyMarket: /^[A-Z]{2}$/.test(process.env.SPOTIFY_MARKET ?? '') ? process.env.SPOTIFY_MARKET! : 'NL',
   }
   return cached
 }

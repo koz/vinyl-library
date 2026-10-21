@@ -21,3 +21,15 @@ Browse the vinyl in your Discogs collection. Built with TanStack Start, React an
 - `npm run dev`: development server
 - `npm run build`: production build
 - `npm run typecheck`, `npm test`
+
+## Spotify embed proof of concept
+
+Run `npm run dev`, open a record on the shelf, and paste a Spotify **album** link into “Listen on Spotify”. The player attempts to start playback; browsers may require pressing play inside Spotify’s player. If the controller doesn't become ready, it falls back to a standard embed and offers “Reload player”. Closing the record stops playback. Spotify determines whether full tracks or previews are available to the listener.
+
+For automatic matching, add `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` from a Spotify developer app to `.env`, then restart the server. `SPOTIFY_MARKET` defaults to `NL`. Credentials and application tokens stay on the server; visitors don’t authorize Spotify with this app. Spotify developer access and quota restrictions still apply to searches.
+
+Only the selected record is searched. Artist/title matches are ranked, with year used as a small tie-breaker. Only an exact artist/title match with a clear lead is selected automatically; ambiguous editions show a list to choose from. “Change album” also accepts a pasted album URL or `spotify:album:` URI. Pressing and digital release years can differ, so year is never a required match. Tracklist/barcode matching and cross-device storage are outside this proof of concept.
+
+Matches are saved by Discogs release ID in localStorage, separately from collection imports, and survive refreshes in that browser. “Disconnect and delete app data” removes them. If browser storage is unavailable, playback still works for the current visit. The prototype lives in `src/components/SpotifyAlbumPrototype.tsx` on `codex/spotify-embed-poc`; the question to validate is whether conservative matching plus a manual correction gives a useful listening experience. Actual full-track playback needs verification in your Spotify session.
+
+Validated locally: pasting ABBA’s Arrival loaded the album and started playback; closing paused it, and the saved match survived reopening and reloading. Desktop and 390px mobile layouts were inspected. Matching and search handling were exercised with mocked Spotify responses (including ambiguous editions, token reuse, fallback search, and 403/429 responses). Live catalog search still needs the Spotify app credentials.

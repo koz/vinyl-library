@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { toVinylItems, type ImportedItem } from '../lib/collection'
 import { DiscogsAuthError, DiscogsError, getCollectionPage } from './discogs.server'
 import { destroySession, getSession } from './session.server'
+import { searchSpotifyAlbums } from './spotify.server'
 
 export type ImportError = 'reauth' | 'rate_limited' | 'failed'
 
@@ -44,3 +45,16 @@ export const fetchCollectionPage = createServerFn({ method: 'GET' })
 export const signOut = createServerFn({ method: 'POST' }).handler(async () => {
   destroySession()
 })
+
+// Proof of concept: only search the selected record, never the whole collection.
+export const matchSpotifyAlbum = createServerFn({ method: 'GET' })
+  .validator(z.object({
+    artist: z.string().trim().min(1).max(500),
+    artistAlt: z.string().trim().max(500).nullable(),
+    title: z.string().trim().min(1).max(500),
+    year: z.number().int().nullable(),
+  }))
+  .handler(async ({ data }) => {
+    if (!getSession()) throw redirect({ to: '/' })
+    return searchSpotifyAlbums(data)
+  })
