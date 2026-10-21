@@ -137,8 +137,8 @@ function ageSleeve(context: CanvasRenderingContext2D, seed: number) {
   context.fillRect(0, 0, size, size)
 
   context.globalAlpha = 1
-  const edge = size * 0.014
-  const edgeAlpha = 0.19 + random() * 0.07
+  const edge = size * 0.028
+  const edgeAlpha = 0.075 + random() * 0.025
   const edges: [number, number, number, number][] = [
     [0, 0, 0, edge],
     [0, size, 0, size - edge],
@@ -148,16 +148,14 @@ function ageSleeve(context: CanvasRenderingContext2D, seed: number) {
   for (const [x0, y0, x1, y1] of edges) {
     const gradient = context.createLinearGradient(x0, y0, x1, y1)
     gradient.addColorStop(0, `rgba(94,81,62,${edgeAlpha})`)
-    gradient.addColorStop(0.2, 'rgba(94,81,62,0.07)')
+    gradient.addColorStop(0.25, 'rgba(94,81,62,0.035)')
+    gradient.addColorStop(0.65, 'rgba(94,81,62,0.008)')
     gradient.addColorStop(1, 'rgba(94,81,62,0)')
     context.fillStyle = gradient
     context.fillRect(0, 0, size, size)
   }
 
-  // The thin folded rim defines white borders without adding a graphic outline.
-  context.strokeStyle = 'rgba(88,76,58,0.26)'
-  context.lineWidth = 1.5
-  context.strokeRect(0.75, 0.75, size - 1.5, size - 1.5)
+  // Let the curved geometry define the rim; a drawn contour makes the fold look sharp.
   context.globalCompositeOperation = 'source-over'
   context.strokeStyle = 'rgba(235,226,207,0.3)'
   for (let i = 0; i < 55; i++) {

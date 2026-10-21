@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { EXPOSED, RECORD_RADIUS } from './layout'
+import { createSleeveGeometry } from './geometry'
 import {
   createDiscTexture,
   createSleeveTexture,
@@ -13,7 +14,6 @@ import {
 export type SleeveInfo = { id: number; artist: string; title: string; coverUrl: string | null }
 
 const FOV = 30
-const SLEEVE_DEPTH = 0.016
 const RECORD_THICKNESS = 0.005
 const SLIDE_DISTANCE = 0.5 + RECORD_RADIUS * 2 * EXPOSED - RECORD_RADIUS
 const LEAN = -0.06
@@ -75,7 +75,7 @@ export class ShelfScene {
   private readonly environment: THREE.Texture
   private readonly wall: THREE.Mesh
   private readonly scrim: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>
-  private readonly sleeveGeometry = new THREE.BoxGeometry(1, 1, SLEEVE_DEPTH).translate(0, 0.5, 0)
+  private readonly sleeveGeometry = createSleeveGeometry()
   private readonly discGeometry = new THREE.CylinderGeometry(
     RECORD_RADIUS,
     RECORD_RADIUS,
@@ -284,7 +284,7 @@ export class ShelfScene {
       roughnessMap: paper.roughness,
       bumpMap: paper.bump,
       bumpScale: 0.3,
-      envMapIntensity: 0.3,
+      envMapIntensity: 0.45,
     })
     const body = new THREE.Mesh(this.sleeveGeometry, [
       this.edgeMaterial,

@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { OBB } from 'three/examples/jsm/math/OBB.js'
 import { ShelfScene } from './scene'
 import { RECORD_RADIUS } from './layout'
+import { createSleeveGeometry } from './geometry'
 
 type Selection = {
   sleeve: {
@@ -139,7 +140,9 @@ describe('sleeve clearance above the wooden shelf', () => {
           new THREE.Vector3(12 + 853 / 2 - 892 / 2, 1450 / 2 - 358.15625 - 8.25, -10),
           new THREE.Vector3(853 / 2, 7.75, 28),
         )
-        const sleeve = new OBB(new THREE.Vector3(0, 0.5, 0), new THREE.Vector3(0.5, 0.5, 0.008))
+        const geometry = createSleeveGeometry()
+        const sleeve = new OBB().fromBox3(geometry.boundingBox!)
+        geometry.dispose()
         // Leave the final closing frame to the normal disposal path.
         for (let i = 0; i < 44; i++) {
           frame(pose)
