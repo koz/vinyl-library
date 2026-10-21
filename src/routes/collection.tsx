@@ -3,13 +3,12 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { RotateCw } from 'lucide-react'
 import { ButtonLabel } from '../components/ButtonLabel'
-import { VinylShelf } from '../components/shelf/VinylShelf'
-import { sortItems, type CollectionItem, type ImportedItem } from '../lib/collection'
+import { CollectionView } from '../components/CollectionView'
+import { ShareCollection } from '../components/ShareCollection'
+import { sortItems, type ImportedItem } from '../lib/collection'
 import { deleteAllCollections, loadCollection, saveCollection } from '../lib/collection-cache'
 import { deleteSpotifyMatches } from '../lib/spotify'
 import { fetchCollectionPage, getViewer, signOut, type ImportError } from '../server/functions'
-
-const PAGE_SIZE = 50
 
 type ImportStatus =
   | { state: 'idle' }
@@ -35,32 +34,9 @@ function CollectionPage() {
   // null until the saved copy (if any) has been read from this browser.
   const [items, setItems] = useState<ImportedItem[] | null>(null)
   const [cacheChecked, setCacheChecked] = useState(false)
-  const [visible, setVisible] = useState(PAGE_SIZE)
   const [status, setStatus] = useState<ImportStatus>({ state: 'idle' })
   const [needsReauth, setNeedsReauth] = useState(false)
-  const [shelfSupported, setShelfSupported] = useState(true)
   const importRun = useRef(0)
-  const loadMoreRef = useRef<HTMLDivElement>(null)
-  const itemCount = items?.length ?? 0
-
-  useEffect(() => {
-    const sentinel = loadMoreRef.current
-    if (!sentinel || visible >= itemCount) return
-
-    let active = true
-    const observer = new IntersectionObserver((entries) => {
-      if (!active || !entries.some((entry) => entry.isIntersecting)) return
-      active = false
-      observer.disconnect()
-      setVisible((count) => Math.min(count + PAGE_SIZE, itemCount))
-    }, { rootMargin: '0px 0px 600px 0px' })
-    observer.observe(sentinel)
-
-    return () => {
-      active = false
-      observer.disconnect()
-    }
-  }, [visible, itemCount])
 
   // Discogs can't filter vinyl or sort by artist, so every page is read before the list is replaced.
   async function runImport() {
@@ -140,7 +116,7 @@ function CollectionPage() {
         <div className="actions">
           {items && importing && (
             <p className="status-line muted" role="status" aria-live="polite">
-              Updating from Discogs · {progressLabel(status)}
+              Updating from Discogs{status.pagesTotal ? ` · ${progressLabel(status)}` : ''}
             </p>
           )}
           <button
@@ -154,6 +130,7 @@ function CollectionPage() {
           >
             <RotateCw size="0.875rem" strokeWidth={1} aria-hidden="true" />
           </button>
+          <ShareCollection username={viewer.username} items={items} />
           <button className="button" type="button" onClick={handleSignOut}>
             <ButtonLabel>Logout</ButtonLabel>
           </button>
@@ -173,19 +150,10 @@ function CollectionPage() {
         {items ? (
           <>
             <UpdateNotice status={status} needsReauth={needsReauth} onRetry={runImport} />
-            {items.length === 0 ? (
-              <p className="empty">There’s no vinyl in your Discogs collection yet.</p>
-            ) : shelfSupported ? (
-              <VinylShelf
-                items={items.slice(0, visible)}
-                onUnsupported={() => setShelfSupported(false)}
-              />
-            ) : (
-              <RecordList items={items.slice(0, visible)} />
-            )}
-            {visible < items.length && (
-              <div ref={loadMoreRef} className="scroll-sentinel" aria-hidden="true" />
-            )}
+            <CollectionView
+              items={items}
+              emptyMessage="There’s no vinyl in your Discogs collection yet."
+            />
           </>
         ) : (
           cacheChecked && !needsReauth && <FirstImport status={status} onRetry={runImport} />
@@ -260,58 +228,6 @@ function UpdateNotice({
     )
   }
   return null
-}
-
-function RecordList({ items }: { items: CollectionItem[] }) {
-  return (
-    <div className="records">
-      <div className="records-head" aria-hidden="true">
-        <span />
-        <span>Artist</span>
-        <span>Album</span>
-        <span>Year</span>
-        <span>Genre</span>
-      </div>
-      <ul className="record-list">
-        {items.map((item) => (
-          <li className="record" key={item.instanceId}>
-            <Cover url={item.thumbUrl ?? item.coverUrl} />
-            <span className="record-artist">
-              <span className="record-artist-name">{item.artist}</span>
-              {item.artistAlt && <span className="record-artist-alt">{item.artistAlt}</span>}
-            </span>
-            <span className="record-title">{item.title}</span>
-            <span className="record-year">{item.year ?? 'Unknown'}</span>
-            <span className="record-genre">{item.genre || 'No genre'}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function Cover({ url }: { url: string | null }) {
-  const [failed, setFailed] = useState(false)
-  const ref = useRef<HTMLImageElement>(null)
-
-  // An image can fail before React attaches onError.
-  useEffect(() => {
-    const img = ref.current
-    if (img?.complete && img.naturalWidth === 0) setFailed(true)
-  }, [])
-
-  if (!url || failed) return <div className="cover cover-missing" aria-hidden="true" />
-  return (
-    <img
-      ref={ref}
-      className="cover"
-      src={url}
-      alt=""
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
-    />
-  )
 }
 
 function DisconnectSection({ onConfirm }: { onConfirm: () => Promise<void> }) {

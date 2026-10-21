@@ -106,13 +106,14 @@ export class ShelfScene {
   private distance = 1
   private frame = 0
   private lastTime = 0
+  private layoutObserved = false
 
-  static async create(canvas: HTMLCanvasElement): Promise<ShelfScene> {
+  static async create(canvas: HTMLCanvasElement, onReady: () => void = () => {}): Promise<ShelfScene> {
     const renderer = new WebGPURenderer({ canvas, alpha: true, antialias: true })
     try {
       await renderer.init()
       const oak = await loadOakMaps(renderer.getMaxAnisotropy())
-      return new ShelfScene(canvas, renderer, oak)
+      return new ShelfScene(canvas, renderer, oak, onReady)
     } catch (error) {
       renderer.dispose()
       throw error
@@ -123,6 +124,7 @@ export class ShelfScene {
     private readonly canvas: HTMLCanvasElement,
     renderer: WebGPURenderer,
     private readonly oak: OakMaps,
+    private onReady: (() => void) | null,
   ) {
     this.renderer = renderer
     this.woodNodes = 'isWebGPUBackend' in renderer.backend && renderer.backend.isWebGPUBackend === true
@@ -264,6 +266,7 @@ export class ShelfScene {
   }
 
   dispose() {
+    this.onReady = null
     cancelAnimationFrame(this.frame)
     window.removeEventListener('scroll', this.requestRender)
     this.observer.disconnect()
@@ -286,6 +289,7 @@ export class ShelfScene {
   }
 
   private onIntersect = (entries: IntersectionObserverEntry[]) => {
+    this.layoutObserved = true
     for (const entry of entries) {
       const element = entry.target as HTMLElement
       if (entry.isIntersecting) this.activate(element)
@@ -450,6 +454,13 @@ export class ShelfScene {
     this.lastTime = now
     const animating = this.update(dt)
     this.renderer.render(this.scene, this.camera)
+    // Wait for the observed shelf and all nearby covers (or their fallbacks) to be drawn.
+    // Offscreen records remain lazy-loaded as the visitor scrolls.
+    if (this.onReady && this.layoutObserved && [...this.sleeves.values()].every((sleeve) => sleeve.texture)) {
+      const onReady = this.onReady
+      this.onReady = null
+      onReady()
+    }
     if (animating) this.requestRender()
     else this.lastTime = 0
   }

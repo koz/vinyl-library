@@ -8,6 +8,7 @@ import {
   type FocusEvent,
   type PointerEvent,
 } from 'react'
+import { LoaderCircle } from 'lucide-react'
 import type { CollectionItem } from '../../lib/collection'
 import { ButtonLabel } from '../ButtonLabel'
 import { SpotifyAlbumPrototype } from '../SpotifyAlbumPrototype'
@@ -23,13 +24,16 @@ type Stage = { item: CollectionItem; closing: boolean }
 export function VinylShelf({
   items,
   onUnsupported,
+  shared = false,
 }: {
   items: CollectionItem[]
   onUnsupported: () => void
+  shared?: boolean
 }) {
   const shelfRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [scene, setScene] = useState<ShelfScene | null>(null)
+  const [ready, setReady] = useState(false)
   const [columns, setColumns] = useState(4)
   const [stage, setStage] = useState<Stage | null>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
@@ -47,7 +51,9 @@ export function VinylShelf({
       async ({ ShelfScene }) => {
         if (cancelled || !canvasRef.current) return
         try {
-          instance = await ShelfScene.create(canvasRef.current)
+          instance = await ShelfScene.create(canvasRef.current, () => {
+            if (!cancelled) setReady(true)
+          })
           if (cancelled) {
             instance.dispose()
             return
@@ -122,10 +128,18 @@ export function VinylShelf({
 
   return (
     <>
-      <canvas ref={canvasRef} className="shelf-canvas" aria-hidden="true" />
+      {!ready && (
+        <div className="shelf-loading" role="status">
+          <LoaderCircle className="shelf-spinner" size={28} strokeWidth={1.5} aria-hidden="true" />
+          <span>Loading records…</span>
+        </div>
+      )}
+      <canvas ref={canvasRef} className={`shelf-canvas${ready ? '' : ' shelf-canvas-loading'}`} aria-hidden="true" />
       <div
         ref={shelfRef}
-        className={`shelf${scene ? ' shelf-ready' : ''}`}
+        className={`shelf${ready ? ' shelf-ready' : ''}`}
+        aria-busy={!ready}
+        inert={!ready}
         style={{ '--columns': columns } as CSSProperties}
       >
         {rows.map((row, index) => (
@@ -147,6 +161,7 @@ export function VinylShelf({
           stage={stage}
           scene={scene}
           onClose={closeStage}
+          shared={shared}
         />
       )}
     </>
@@ -217,10 +232,12 @@ function StageView({
   stage,
   scene,
   onClose,
+  shared,
 }: {
   stage: Stage
   scene: ShelfScene | null
   onClose: () => void
+  shared: boolean
 }) {
   const artRef = useRef<HTMLButtonElement>(null)
   const { item } = stage
@@ -273,7 +290,7 @@ function StageView({
             <ButtonLabel>View on Discogs</ButtonLabel>
           </a>
         </div>
-        <SpotifyAlbumPrototype key={item.releaseId} item={item} active={!stage.closing} />
+        {!shared && <SpotifyAlbumPrototype key={item.releaseId} item={item} active={!stage.closing} />}
       </section>
     </div>
   )

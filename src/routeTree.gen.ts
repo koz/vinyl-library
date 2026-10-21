@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CollectionRouteImport } from './routes/collection'
+import { Route as ShareRouteImport } from './routes/share'
 import { Route as ApiCoverRouteImport } from './routes/api/cover'
 import { Route as AuthDiscogsCallbackRouteImport } from './routes/auth/discogs/callback'
 import { Route as AuthDiscogsStartRouteImport } from './routes/auth/discogs/start'
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
 const CollectionRoute = CollectionRouteImport.update({
   id: '/collection',
   path: '/collection',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareRoute = ShareRouteImport.update({
+  id: '/share',
+  path: '/share',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCoverRoute = ApiCoverRouteImport.update({
@@ -44,6 +50,7 @@ const AuthDiscogsStartRoute = AuthDiscogsStartRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
+  '/share': typeof ShareRoute
   '/api/cover': typeof ApiCoverRoute
   '/auth/discogs/callback': typeof AuthDiscogsCallbackRoute
   '/auth/discogs/start': typeof AuthDiscogsStartRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
+  '/share': typeof ShareRoute
   '/api/cover': typeof ApiCoverRoute
   '/auth/discogs/callback': typeof AuthDiscogsCallbackRoute
   '/auth/discogs/start': typeof AuthDiscogsStartRoute
@@ -59,6 +67,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/collection': typeof CollectionRoute
+  '/share': typeof ShareRoute
   '/api/cover': typeof ApiCoverRoute
   '/auth/discogs/callback': typeof AuthDiscogsCallbackRoute
   '/auth/discogs/start': typeof AuthDiscogsStartRoute
@@ -68,6 +77,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/collection'
+    | '/share'
     | '/api/cover'
     | '/auth/discogs/callback'
     | '/auth/discogs/start'
@@ -75,6 +85,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/collection'
+    | '/share'
     | '/api/cover'
     | '/auth/discogs/callback'
     | '/auth/discogs/start'
@@ -82,6 +93,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/collection'
+    | '/share'
     | '/api/cover'
     | '/auth/discogs/callback'
     | '/auth/discogs/start'
@@ -90,6 +102,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CollectionRoute: typeof CollectionRoute
+  ShareRoute: typeof ShareRoute
   ApiCoverRoute: typeof ApiCoverRoute
   AuthDiscogsCallbackRoute: typeof AuthDiscogsCallbackRoute
   AuthDiscogsStartRoute: typeof AuthDiscogsStartRoute
@@ -109,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/collection'
       fullPath: '/collection'
       preLoaderRoute: typeof CollectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share': {
+      id: '/share'
+      path: '/share'
+      fullPath: '/share'
+      preLoaderRoute: typeof ShareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cover': {
@@ -138,6 +158,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CollectionRoute: CollectionRoute,
+  ShareRoute: ShareRoute,
   ApiCoverRoute: ApiCoverRoute,
   AuthDiscogsCallbackRoute: AuthDiscogsCallbackRoute,
   AuthDiscogsStartRoute: AuthDiscogsStartRoute,

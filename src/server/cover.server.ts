@@ -32,7 +32,7 @@ export async function fetchCover(url: URL): Promise<Response> {
     headers: {
       'Content-Type': type,
       // Discogs image URLs are content-addressed, so they never change.
-      'Cache-Control': 'private, max-age=2592000, immutable',
+      'Cache-Control': 'public, max-age=2592000, immutable',
     },
   })
 }
