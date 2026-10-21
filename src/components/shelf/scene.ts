@@ -1,11 +1,9 @@
 import * as THREE from 'three'
 import { WebGPURenderer, PMREMGenerator } from 'three/webgpu'
-import { mix, texture } from 'three/tsl'
-import type Node from 'three/src/nodes/core/Node.js'
-import { GetWoodPreset, WoodNodeMaterial } from 'three/examples/jsm/materials/WoodNodeMaterial.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { EXPOSED, RECORD_RADIUS } from './layout'
 import { createSleeveGeometry, setPlankGrainUVs } from './geometry'
+import { createWoodMaterial } from './wood-material'
 import {
   createDiscTexture,
   createSleeveTexture,
@@ -94,8 +92,8 @@ export class ShelfScene {
   private readonly edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xc9c1b1, roughness: 0.95 })
   private readonly backMaterial = new THREE.MeshStandardMaterial({ color: 0xd9d1c1, roughness: 0.95 })
   private readonly rimMaterial = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.35 })
-  private readonly woodMaterial: THREE.MeshStandardMaterial
-  private readonly woodEndMaterial: THREE.MeshStandardMaterial
+  private readonly plankOffsets = new WeakMap<HTMLElement, number>()
+  private readonly plankMaterials = new Map<HTMLElement, ReturnType<typeof createWoodMaterial>>()
   private readonly observer: IntersectionObserver
   private readonly resizeObserver: ResizeObserver
   private readonly tracked = new Map<HTMLElement, SleeveInfo | 'plank'>()
@@ -128,20 +126,6 @@ export class ShelfScene {
     private readonly oak: OakMaps,
   ) {
     this.renderer = renderer
-    this.woodMaterial = new THREE.MeshStandardMaterial({
-      map: this.oak.color,
-      bumpMap: this.oak.bump,
-      bumpScale: 0.22 * WORLD_SCALE,
-      roughnessMap: this.oak.roughness,
-      roughness: 1,
-      envMapIntensity: 0.4,
-    })
-    this.woodEndMaterial = new THREE.MeshStandardMaterial({
-      map: this.oak.endGrain,
-      roughness: 0.9,
-      envMapIntensity: 0.3,
-    })
-
     this.woodNodes = 'isWebGPUBackend' in renderer.backend && renderer.backend.isWebGPUBackend === true
     this.scene.scale.setScalar(WORLD_SCALE)
     this.camera.near = WORLD_SCALE
@@ -205,6 +189,8 @@ export class ShelfScene {
 
   /** Draws a wooden shelf plank over `element`. */
   trackPlank(element: HTMLElement): () => void {
+    // Pick a position once per shelf, so scrolling it out of view never changes its grain.
+    if (!this.plankOffsets.has(element)) this.plankOffsets.set(element, Math.random())
     this.tracked.set(element, 'plank')
     this.observer.observe(element)
     return () => {
@@ -289,7 +275,7 @@ export class ShelfScene {
     this.discGeometry.dispose()
     this.plankGeometry.dispose()
     for (const material of [
-      this.edgeMaterial, this.backMaterial, this.rimMaterial, this.woodMaterial, this.woodEndMaterial,
+      this.edgeMaterial, this.backMaterial, this.rimMaterial,
     ]) {
       material.dispose()
     }
@@ -315,45 +301,9 @@ export class ShelfScene {
     if (!info) return
     if (info === 'plank') {
       if (this.planks.has(element)) return
-      const offset = ([...this.tracked.keys()].indexOf(element) * 0.381966) % 1
-      let plank: THREE.Mesh
-      if (this.woodNodes) {
-        const material = new WoodNodeMaterial({
-          ...GetWoodPreset('white_oak', 'matte'),
-          darkGrainColor: '#b58a58',
-          lightGrainColor: '#d6ae79',
-          centerSize: 0.3,
-          ringBias: 0.55,
-          ringThickness: 1 / 85,
-          splotchIntensity: 0.18,
-          fineWarpScale: 22,
-          cellScale: 1100,
-        })
-        // Keep the solid-wood pattern, but layer fine fibers and open pores over its broad rings.
-        material.map = this.oak.color.clone()
-        material.bumpMap = this.oak.bump.clone()
-        material.roughnessMap = this.oak.roughness.clone()
-        for (const map of [material.map, material.bumpMap, material.roughnessMap]) {
-          map.offset.set(offset, offset * 0.85)
-        }
-        const nodes = material as WoodNodeMaterial & { colorNode: Node<'vec3'> }
-        nodes.colorNode = mix(nodes.colorNode!, texture(material.map).rgb, 0.9)
-        material.bumpScale = 0.32 * WORLD_SCALE
-        material.roughness = 0.85
-        material.envMapIntensity = 0.4
-        plank = new THREE.Mesh(this.plankGeometry.clone(), material)
-        plank.userData.oakOffset = offset
-      } else {
-        const material = this.woodMaterial.clone()
-        // The addon contains WGSL, so retain the texture-based oak on the WebGL backend.
-        for (const key of ['map', 'bumpMap', 'roughnessMap'] as const) {
-          material[key] = material[key]!.clone()
-          material[key]!.offset.set(offset, offset * 0.85)
-        }
-        plank = new THREE.Mesh(this.plankGeometry.clone(), [
-          this.woodEndMaterial, this.woodEndMaterial, material, material, material, material,
-        ])
-      }
+      const wood = createWoodMaterial(this.oak, this.woodNodes, this.plankOffsets.get(element)!)
+      const plank = new THREE.Mesh(this.plankGeometry.clone(), wood.material)
+      this.plankMaterials.set(element, wood)
       plank.castShadow = true
       plank.receiveShadow = true
       this.planks.set(element, plank)
@@ -427,19 +377,8 @@ export class ShelfScene {
     const plank = this.planks.get(element)
     if (plank) {
       this.scene.remove(plank)
-      if (Array.isArray(plank.material)) {
-        const material = plank.material[2] as THREE.MeshStandardMaterial
-        material.map?.dispose()
-        material.bumpMap?.dispose()
-        material.roughnessMap?.dispose()
-        material.dispose()
-      } else {
-        const material = plank.material as THREE.MeshStandardMaterial
-        material.map?.dispose()
-        material.bumpMap?.dispose()
-        material.roughnessMap?.dispose()
-        plank.material.dispose()
-      }
+      this.plankMaterials.get(element)?.dispose()
+      this.plankMaterials.delete(element)
       plank.geometry.dispose()
       this.planks.delete(element)
     }
@@ -553,16 +492,7 @@ export class ShelfScene {
         plank.userData.width = rect.width
         plank.userData.height = rect.height
       }
-      if (plank.material instanceof WoodNodeMaterial) {
-        const offset = plank.userData.oakOffset as number
-        // The shader's trunk runs along Z; rotate the grain along the length of the shelf.
-        plank.material.transformationMatrix.set(
-          0, 0, PLANK_DEPTH / 400, 0.65 + offset * 0.35,
-          0, rect.height / 400, 0, 0.28 + offset * 0.18,
-          rect.width / 80, 0, 0, offset * 3,
-          0, 0, 0, 1,
-        )
-      }
+      this.plankMaterials.get(element)?.setDimensions(rect.width, rect.height, PLANK_DEPTH)
     }
 
     if (!this.selection) this.scrim.visible = false

@@ -486,7 +486,7 @@ export function loadOakMaps(maxAnisotropy: number): Promise<OakMaps> {
   })
 }
 
-/** Fine, straight oak fibers from the supplied reference, with relief isolated from its lighting. */
+/** Natural oak grain and knots from the supplied reference, with relief isolated from its lighting. */
 async function createOakMaps(maxAnisotropy: number): Promise<OakMaps> {
   const image = new Image()
   image.src = oakReferenceUrl
