@@ -1,5 +1,29 @@
 import * as THREE from 'three'
 
+/** A texture tile covers the same area of timber on the top, front and sides. */
+export function setPlankGrainUVs(geometry: THREE.BoxGeometry, width: number, height: number, depth: number) {
+  const positions = geometry.getAttribute('position')
+  const normals = geometry.getAttribute('normal')
+  const uvs = geometry.getAttribute('uv')
+  const tileSize = 600
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i)
+    const y = positions.getY(i)
+    const z = positions.getZ(i)
+    const nx = normals.getX(i)
+    const ny = normals.getY(i)
+    const nz = normals.getZ(i)
+    if (nx !== 0) {
+      uvs.setXY(i, (0.5 - z * nx) * depth / tileSize, (y + 0.5) * height / tileSize)
+    } else if (ny !== 0) {
+      uvs.setXY(i, (x + 0.5) * width / tileSize, (0.5 - z * ny) * depth / tileSize)
+    } else {
+      uvs.setXY(i, (0.5 + x * nz) * width / tileSize, (y + 0.5) * height / tileSize)
+    }
+  }
+  uvs.needsUpdate = true
+}
+
 const DEPTH = 0.016
 const FOLD_RADIUS = 0.006
 

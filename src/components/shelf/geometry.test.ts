@@ -1,7 +1,29 @@
 import { expect, it } from 'vitest'
 import * as THREE from 'three'
-import { createSleeveGeometry } from './geometry'
+import { createSleeveGeometry, setPlankGrainUVs } from './geometry'
 import { RECORD_RADIUS } from './layout'
+
+it('keeps the wood fibers at the same physical scale across plank faces and after resizing', () => {
+  const geometry = new THREE.BoxGeometry()
+  const normals = geometry.getAttribute('normal')
+  const uvs = geometry.getAttribute('uv')
+  const span = (face: 'front' | 'top', direction: 'u' | 'v') => {
+    const values: number[] = []
+    for (let i = 0; i < normals.count; i++) {
+      if ((face === 'front' ? normals.getZ(i) : normals.getY(i)) === 1) {
+        values.push(direction === 'u' ? uvs.getX(i) : uvs.getY(i))
+      }
+    }
+    return Math.max(...values) - Math.min(...values)
+  }
+  setPlankGrainUVs(geometry, 900, 16, 56)
+  expect(span('front', 'u') / 900).toBeCloseTo(span('front', 'v') / 16, 8)
+  expect(span('top', 'u') / 900).toBeCloseTo(span('top', 'v') / 56, 8)
+  setPlankGrainUVs(geometry, 450, 20, 56)
+  expect(span('front', 'u')).toBeCloseTo(450 / 600, 8)
+  expect(span('front', 'v')).toBeCloseTo(20 / 600, 8)
+  geometry.dispose()
+})
 
 it('keeps the record enclosed by the bent panels and the bottom resting on the shelf', () => {
   const geometry = createSleeveGeometry()

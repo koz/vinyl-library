@@ -1,13 +1,18 @@
 import * as THREE from 'three'
+import { WebGPURenderer, PMREMGenerator } from 'three/webgpu'
+import { mix, texture } from 'three/tsl'
+import type Node from 'three/src/nodes/core/Node.js'
+import { GetWoodPreset, WoodNodeMaterial } from 'three/examples/jsm/materials/WoodNodeMaterial.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { EXPOSED, RECORD_RADIUS } from './layout'
-import { createSleeveGeometry } from './geometry'
+import { createSleeveGeometry, setPlankGrainUVs } from './geometry'
 import {
   createDiscTexture,
   createSleeveTexture,
   getVinylMaps,
   getSleevePaperMaps,
-  getWoodTexture,
+  loadOakMaps,
+  type OakMaps,
   loadCoverImage,
 } from './textures'
 
@@ -29,6 +34,8 @@ const SHELF_CLEARANCE_FRACTION = 0.3
 const SLIDE_SECONDS = 0.9
 const SCRIM_OPACITY = 0.94
 const BACKGROUND = 0xf5f2ec
+// The wood shader's distance filtering is designed for metre-scale scenes.
+const WORLD_SCALE = 0.001
 
 type Pose = { x: number; y: number; z: number; size: number; rx: number; ry: number }
 
@@ -65,10 +72,11 @@ const step = (current: number, target: number, delta: number) =>
 /**
  * Draws every sleeve and shelf in one fixed, full-viewport canvas. The page lays out invisible
  * slot elements; each frame the 3D objects are placed over their slots, so scrolling, hit testing
- * and keyboard focus stay in the DOM. One CSS pixel is one world unit at z = 0.
+ * and keyboard focus stay in the DOM. Poses use CSS pixels, scaled to metres by the scene.
  */
 export class ShelfScene {
-  private readonly renderer: THREE.WebGLRenderer
+  private readonly renderer: WebGPURenderer
+  private readonly woodNodes: boolean
   private readonly scene = new THREE.Scene()
   private readonly camera = new THREE.PerspectiveCamera(FOV, 1, 1, 10_000)
   private readonly light = new THREE.DirectionalLight(0xffffff, 1.8)
@@ -86,7 +94,8 @@ export class ShelfScene {
   private readonly edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xc9c1b1, roughness: 0.95 })
   private readonly backMaterial = new THREE.MeshStandardMaterial({ color: 0xd9d1c1, roughness: 0.95 })
   private readonly rimMaterial = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.35 })
-  private readonly woodMaterial = new THREE.MeshStandardMaterial({ map: getWoodTexture(), roughness: 0.65 })
+  private readonly woodMaterial: THREE.MeshStandardMaterial
+  private readonly woodEndMaterial: THREE.MeshStandardMaterial
   private readonly observer: IntersectionObserver
   private readonly resizeObserver: ResizeObserver
   private readonly tracked = new Map<HTMLElement, SleeveInfo | 'plank'>()
@@ -101,14 +110,47 @@ export class ShelfScene {
   private frame = 0
   private lastTime = 0
 
-  constructor(private readonly canvas: HTMLCanvasElement) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
+  static async create(canvas: HTMLCanvasElement): Promise<ShelfScene> {
+    const renderer = new WebGPURenderer({ canvas, alpha: true, antialias: true })
+    try {
+      await renderer.init()
+      const oak = await loadOakMaps(renderer.getMaxAnisotropy())
+      return new ShelfScene(canvas, renderer, oak)
+    } catch (error) {
+      renderer.dispose()
+      throw error
+    }
+  }
+
+  private constructor(
+    private readonly canvas: HTMLCanvasElement,
+    renderer: WebGPURenderer,
+    private readonly oak: OakMaps,
+  ) {
+    this.renderer = renderer
+    this.woodMaterial = new THREE.MeshStandardMaterial({
+      map: this.oak.color,
+      bumpMap: this.oak.bump,
+      bumpScale: 0.22 * WORLD_SCALE,
+      roughnessMap: this.oak.roughness,
+      roughness: 1,
+      envMapIntensity: 0.4,
+    })
+    this.woodEndMaterial = new THREE.MeshStandardMaterial({
+      map: this.oak.endGrain,
+      roughness: 0.9,
+      envMapIntensity: 0.3,
+    })
+
+    this.woodNodes = 'isWebGPUBackend' in renderer.backend && renderer.backend.isWebGPUBackend === true
+    this.scene.scale.setScalar(WORLD_SCALE)
+    this.camera.near = WORLD_SCALE
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.toneMapping = THREE.NeutralToneMapping
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFShadowMap
 
-    const pmrem = new THREE.PMREMGenerator(this.renderer)
+    const pmrem = new PMREMGenerator(this.renderer)
     this.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     pmrem.dispose()
     this.scene.environment = this.environment
@@ -118,7 +160,7 @@ export class ShelfScene {
     this.light.shadow.mapSize.set(2048, 2048)
     this.light.shadow.radius = 6
     this.light.shadow.bias = -0.0004
-    this.light.shadow.normalBias = 0.6
+    this.light.shadow.normalBias = 0.6 * WORLD_SCALE
     this.scene.add(this.light, this.light.target)
 
     this.wall = new THREE.Mesh(
@@ -184,7 +226,7 @@ export class ShelfScene {
     if (!sleeve || this.selection) return
 
     const { roughness, normal, anisotropy } = getVinylMaps()
-    const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy()
+    const maxAnisotropy = this.renderer.getMaxAnisotropy()
     const material = new THREE.MeshPhysicalMaterial({
       map: createDiscTexture(sleeve.texture?.image ?? null, maxAnisotropy),
       roughnessMap: roughness,
@@ -246,7 +288,9 @@ export class ShelfScene {
     this.sleeveGeometry.dispose()
     this.discGeometry.dispose()
     this.plankGeometry.dispose()
-    for (const material of [this.edgeMaterial, this.backMaterial, this.rimMaterial, this.woodMaterial]) {
+    for (const material of [
+      this.edgeMaterial, this.backMaterial, this.rimMaterial, this.woodMaterial, this.woodEndMaterial,
+    ]) {
       material.dispose()
     }
     this.wall.geometry.dispose()
@@ -271,7 +315,45 @@ export class ShelfScene {
     if (!info) return
     if (info === 'plank') {
       if (this.planks.has(element)) return
-      const plank = new THREE.Mesh(this.plankGeometry, this.woodMaterial)
+      const offset = ([...this.tracked.keys()].indexOf(element) * 0.381966) % 1
+      let plank: THREE.Mesh
+      if (this.woodNodes) {
+        const material = new WoodNodeMaterial({
+          ...GetWoodPreset('white_oak', 'matte'),
+          darkGrainColor: '#b58a58',
+          lightGrainColor: '#d6ae79',
+          centerSize: 0.3,
+          ringBias: 0.55,
+          ringThickness: 1 / 85,
+          splotchIntensity: 0.18,
+          fineWarpScale: 22,
+          cellScale: 1100,
+        })
+        // Keep the solid-wood pattern, but layer fine fibers and open pores over its broad rings.
+        material.map = this.oak.color.clone()
+        material.bumpMap = this.oak.bump.clone()
+        material.roughnessMap = this.oak.roughness.clone()
+        for (const map of [material.map, material.bumpMap, material.roughnessMap]) {
+          map.offset.set(offset, offset * 0.85)
+        }
+        const nodes = material as WoodNodeMaterial & { colorNode: Node<'vec3'> }
+        nodes.colorNode = mix(nodes.colorNode!, texture(material.map).rgb, 0.9)
+        material.bumpScale = 0.32 * WORLD_SCALE
+        material.roughness = 0.85
+        material.envMapIntensity = 0.4
+        plank = new THREE.Mesh(this.plankGeometry.clone(), material)
+        plank.userData.oakOffset = offset
+      } else {
+        const material = this.woodMaterial.clone()
+        // The addon contains WGSL, so retain the texture-based oak on the WebGL backend.
+        for (const key of ['map', 'bumpMap', 'roughnessMap'] as const) {
+          material[key] = material[key]!.clone()
+          material[key]!.offset.set(offset, offset * 0.85)
+        }
+        plank = new THREE.Mesh(this.plankGeometry.clone(), [
+          this.woodEndMaterial, this.woodEndMaterial, material, material, material, material,
+        ])
+      }
       plank.castShadow = true
       plank.receiveShadow = true
       this.planks.set(element, plank)
@@ -286,7 +368,7 @@ export class ShelfScene {
       roughness: 1,
       roughnessMap: paper.roughness,
       bumpMap: paper.bump,
-      bumpScale: 0.3,
+      bumpScale: 0.3 * WORLD_SCALE,
       envMapIntensity: 0.45,
     })
     const body = new THREE.Mesh(this.sleeveGeometry, [
@@ -332,7 +414,7 @@ export class ShelfScene {
     sleeve.texture = createSleeveTexture(
       image,
       sleeve.info,
-      this.renderer.capabilities.getMaxAnisotropy(),
+      this.renderer.getMaxAnisotropy(),
     )
     image?.close()
     sleeve.front.map = sleeve.texture
@@ -345,6 +427,20 @@ export class ShelfScene {
     const plank = this.planks.get(element)
     if (plank) {
       this.scene.remove(plank)
+      if (Array.isArray(plank.material)) {
+        const material = plank.material[2] as THREE.MeshStandardMaterial
+        material.map?.dispose()
+        material.bumpMap?.dispose()
+        material.roughnessMap?.dispose()
+        material.dispose()
+      } else {
+        const material = plank.material as THREE.MeshStandardMaterial
+        material.map?.dispose()
+        material.bumpMap?.dispose()
+        material.roughnessMap?.dispose()
+        plank.material.dispose()
+      }
+      plank.geometry.dispose()
       this.planks.delete(element)
     }
     const sleeve = this.sleeves.get(element)
@@ -372,16 +468,16 @@ export class ShelfScene {
     this.renderer.setSize(this.width, this.height, false)
     this.distance = this.height / 2 / Math.tan(THREE.MathUtils.degToRad(FOV / 2))
     this.camera.aspect = this.width / this.height
-    this.camera.position.set(0, 0, this.distance)
-    this.camera.far = this.distance * 3
+    this.camera.position.set(0, 0, this.distance * WORLD_SCALE)
+    this.camera.far = this.distance * 3 * WORLD_SCALE
     this.camera.updateProjectionMatrix()
 
-    const extent = Math.max(this.width, this.height) * 0.85
+    const extent = Math.max(this.width, this.height) * 0.85 * WORLD_SCALE
     const shadowCamera = this.light.shadow.camera
     shadowCamera.left = shadowCamera.bottom = -extent
     shadowCamera.right = shadowCamera.top = extent
-    shadowCamera.near = 1
-    shadowCamera.far = this.distance * 3
+    shadowCamera.near = WORLD_SCALE
+    shadowCamera.far = this.distance * 3 * WORLD_SCALE
     shadowCamera.updateProjectionMatrix()
     this.light.position.set(-0.3, 0.45, 1).normalize().multiplyScalar(this.distance)
 
@@ -452,6 +548,21 @@ export class ShelfScene {
         PLANK_FRONT - PLANK_DEPTH / 2,
       )
       plank.scale.set(rect.width, rect.height, PLANK_DEPTH)
+      if (plank.userData.width !== rect.width || plank.userData.height !== rect.height) {
+        setPlankGrainUVs(plank.geometry as THREE.BoxGeometry, rect.width, rect.height, PLANK_DEPTH)
+        plank.userData.width = rect.width
+        plank.userData.height = rect.height
+      }
+      if (plank.material instanceof WoodNodeMaterial) {
+        const offset = plank.userData.oakOffset as number
+        // The shader's trunk runs along Z; rotate the grain along the length of the shelf.
+        plank.material.transformationMatrix.set(
+          0, 0, PLANK_DEPTH / 400, 0.65 + offset * 0.35,
+          0, rect.height / 400, 0, 0.28 + offset * 0.18,
+          rect.width / 80, 0, 0, offset * 3,
+          0, 0, 0, 1,
+        )
+      }
     }
 
     if (!this.selection) this.scrim.visible = false

@@ -15,8 +15,8 @@ import type { ShelfScene } from './scene'
 type Stage = { item: CollectionItem; closing: boolean }
 
 /**
- * The collection as records standing on wooden shelves, drawn in WebGL. Calls `onUnsupported`
- * if the browser can't create a WebGL context, so the page can fall back to a plain list.
+ * The collection as records standing on wooden shelves, drawn with WebGPU or WebGL. Calls
+ * `onUnsupported` if neither backend is available, so the page can fall back to a plain list.
  */
 export function VinylShelf({
   items,
@@ -43,13 +43,19 @@ export function VinylShelf({
     let cancelled = false
     let instance: ShelfScene | null = null
     import('./scene').then(
-      ({ ShelfScene }) => {
+      async ({ ShelfScene }) => {
         if (cancelled || !canvasRef.current) return
         try {
-          instance = new ShelfScene(canvasRef.current)
+          instance = await ShelfScene.create(canvasRef.current)
+          if (cancelled) {
+            instance.dispose()
+            return
+          }
         } catch (error) {
-          console.error('Could not start the 3D shelf', error)
-          unsupported.current()
+          if (!cancelled) {
+            console.error('Could not start the 3D shelf', error)
+            unsupported.current()
+          }
           return
         }
         setScene(instance)

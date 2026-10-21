@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { RECORD_RADIUS } from './layout'
+import oakReferenceUrl from '../../assets/oak-fibers.jpg'
 
 const LABEL_RATIO = 1 / 3
 
@@ -469,42 +470,82 @@ export function createDiscTexture(cover: CanvasImageSource | null, maxAnisotropy
   return texture
 }
 
-let woodTexture: THREE.CanvasTexture | null = null
+export type OakMaps = {
+  color: THREE.CanvasTexture
+  bump: THREE.CanvasTexture
+  roughness: THREE.CanvasTexture
+  endGrain: THREE.CanvasTexture
+}
 
-export function getWoodTexture(): THREE.CanvasTexture {
-  if (woodTexture) return woodTexture
-  const width = 1024
-  const height = 128
-  const { element, context } = canvas(width, height)
-  const random = seededRandom(7)
-  const gradient = context.createLinearGradient(0, 0, 0, height)
-  gradient.addColorStop(0, '#a67c52')
-  gradient.addColorStop(0.5, '#986f47')
-  gradient.addColorStop(1, '#a37a50')
-  context.fillStyle = gradient
-  context.fillRect(0, 0, width, height)
+let oakMaps: Promise<OakMaps> | null = null
 
-  for (let i = 0; i < 70; i++) {
-    const y = random() * height
-    const amplitude = 1 + random() * 4
-    const frequency = 0.004 + random() * 0.01
-    const phase = random() * Math.PI * 2
-    context.strokeStyle = random() > 0.5 ? `rgba(70,42,20,${0.08 + random() * 0.18})` : `rgba(200,160,110,${0.06 + random() * 0.1})`
-    context.lineWidth = 0.5 + random() * 1.5
-    context.beginPath()
-    for (let x = 0; x <= width; x += 8) {
-      const offset = Math.sin(x * frequency + phase) * amplitude
-      if (x === 0) context.moveTo(x, y + offset)
-      else context.lineTo(x, y + offset)
-    }
-    context.stroke()
+export function loadOakMaps(maxAnisotropy: number): Promise<OakMaps> {
+  return oakMaps ??= createOakMaps(maxAnisotropy).catch((error) => {
+    oakMaps = null
+    throw error
+  })
+}
+
+/** Fine, straight oak fibers from the supplied reference, with relief isolated from its lighting. */
+async function createOakMaps(maxAnisotropy: number): Promise<OakMaps> {
+  const image = new Image()
+  image.src = oakReferenceUrl
+  await image.decode()
+  const size = 1024
+  const color = canvas(size)
+  color.context.translate(size / 2, size / 2)
+  color.context.rotate(-Math.PI / 2)
+  color.context.drawImage(image, -size / 2, -size / 2, size, size)
+  color.context.resetTransform()
+
+  const soft = canvas(size)
+  soft.context.filter = 'blur(6px)'
+  soft.context.drawImage(color.element, 0, 0)
+  const pixels = color.context.getImageData(0, 0, size, size)
+  const low = soft.context.getImageData(0, 0, size, size)
+  const bump = canvas(size)
+  const roughness = canvas(size)
+  const bumpImage = bump.context.createImageData(size, size)
+  const roughImage = roughness.context.createImageData(size, size)
+  const average = [0, 0, 0]
+  for (let i = 0; i < pixels.data.length; i += 4) {
+    const luminance = (pixels.data[i]! + pixels.data[i + 1]! * 2 + pixels.data[i + 2]!) / 4
+    const local = (low.data[i]! + low.data[i + 1]! * 2 + low.data[i + 2]!) / 4
+    const fiber = luminance - local
+    bumpImage.data[i] = bumpImage.data[i + 1] = bumpImage.data[i + 2] = 128 + fiber * 0.75
+    bumpImage.data[i + 3] = 255
+    roughImage.data[i] = roughImage.data[i + 1] = roughImage.data[i + 2] = 218 - fiber * 0.25
+    roughImage.data[i + 3] = 255
+    for (let channel = 0; channel < 3; channel++) average[channel]! += pixels.data[i + channel]!
   }
-  context.globalCompositeOperation = 'overlay'
-  context.globalAlpha = 0.25
-  context.fillStyle = context.createPattern(paperGrain(), 'repeat') ?? '#888'
-  context.fillRect(0, 0, width, height)
+  bump.context.putImageData(bumpImage, 0, 0)
+  roughness.context.putImageData(roughImage, 0, 0)
+  for (let channel = 0; channel < 3; channel++) average[channel]! /= size * size
 
-  woodTexture = new THREE.CanvasTexture(element)
-  woodTexture.colorSpace = THREE.SRGBColorSpace
-  return woodTexture
+  const end = canvas(512, 128)
+  const endImage = end.context.createImageData(512, 128)
+  const random = seededRandom(71)
+  for (let y = 0; y < 128; y++) {
+    for (let x = 0; x < 512; x++) {
+      const radius = Math.hypot((x - 140) * 0.38, (y + 55) * 1.5)
+      const shade = Math.sin(radius * 0.2 + Math.sin(y * 0.05) * 0.8) * 5 + (random() - 0.5) * 5
+      const i = (y * 512 + x) * 4
+      for (let channel = 0; channel < 3; channel++) endImage.data[i + channel] = average[channel]! * 0.94 + shade
+      endImage.data[i + 3] = 255
+    }
+  }
+  end.context.putImageData(endImage, 0, 0)
+
+  const maps = {
+    color: new THREE.CanvasTexture(color.element),
+    bump: new THREE.CanvasTexture(bump.element),
+    roughness: new THREE.CanvasTexture(roughness.element),
+    endGrain: new THREE.CanvasTexture(end.element),
+  }
+  maps.color.colorSpace = maps.endGrain.colorSpace = THREE.SRGBColorSpace
+  for (const map of Object.values(maps)) {
+    map.anisotropy = maxAnisotropy
+    map.wrapS = map.wrapT = THREE.MirroredRepeatWrapping
+  }
+  return maps
 }
