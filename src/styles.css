@@ -374,39 +374,6 @@ a {
   background: #b69a72;
 }
 
-.shelf-card {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 50%;
-  z-index: 3;
-  display: grid;
-  gap: 2px;
-  width: max-content;
-  max-width: 240px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: 0 8px 24px rgb(45 43 40 / 0.12);
-  font-size: 0.875rem;
-  line-height: 1.35;
-  text-align: left;
-  pointer-events: none;
-  transform: translateX(-50%);
-  animation: card-in 0.15s ease-out;
-}
-
-.shelf-card-title {
-  font-weight: 600;
-}
-
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 4px);
-  }
-}
-
 /* Stage: the selected record at the front, with its details */
 
 .stage {
@@ -509,7 +476,6 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shelf-card,
   .stage-details,
   .stage-closing .stage-details {
     animation: none;

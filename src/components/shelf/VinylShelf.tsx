@@ -29,7 +29,6 @@ export function VinylShelf({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [scene, setScene] = useState<ShelfScene | null>(null)
   const [columns, setColumns] = useState(5)
-  const [hovered, setHovered] = useState<number | null>(null)
   const [stage, setStage] = useState<Stage | null>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const unsupported = useRef(onUnsupported)
@@ -100,7 +99,6 @@ export function VinylShelf({
     if (stage) return
     returnFocus.current = slot
     scene?.hover(null)
-    setHovered(null)
     setStage({ item, closing: false })
   }
 
@@ -135,8 +133,6 @@ export function VinylShelf({
                 key={item.instanceId}
                 item={item}
                 scene={scene}
-                showCard={hovered === item.instanceId && !stage}
-                onHover={setHovered}
                 onOpen={openStage}
               />
             ))}
@@ -158,14 +154,10 @@ export function VinylShelf({
 function Slot({
   item,
   scene,
-  showCard,
-  onHover,
   onOpen,
 }: {
   item: CollectionItem
   scene: ShelfScene | null
-  showCard: boolean
-  onHover: (id: number | null) => void
   onOpen: (item: CollectionItem, slot: HTMLElement) => void
 }) {
   const ref = useRef<HTMLButtonElement>(null)
@@ -184,18 +176,15 @@ function Slot({
   function handlePointerMove(event: PointerEvent<HTMLButtonElement>) {
     if (event.pointerType === 'touch') return
     scene?.hover(item.instanceId)
-    onHover(item.instanceId)
   }
 
   function handleLeave() {
     scene?.hover(null)
-    onHover(null)
   }
 
   function handleFocus(event: FocusEvent<HTMLButtonElement>) {
     if (!event.currentTarget.matches(':focus-visible')) return
     scene?.hover(item.instanceId)
-    onHover(item.instanceId)
   }
 
   return (
@@ -209,17 +198,7 @@ function Slot({
       onFocus={handleFocus}
       onBlur={handleLeave}
       onClick={(event) => onOpen(item, event.currentTarget)}
-    >
-      {showCard && (
-        <span className="shelf-card" aria-hidden="true">
-          <span className="shelf-card-title">{item.title}</span>
-          <span className="shelf-card-artist">{item.artist}</span>
-          <span className="shelf-card-meta muted">
-            {[item.year ?? 'Unknown year', item.genre].filter(Boolean).join(' · ')}
-          </span>
-        </span>
-      )}
-    </button>
+    />
   )
 }
 
