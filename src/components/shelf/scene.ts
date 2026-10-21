@@ -190,7 +190,7 @@ export class ShelfScene {
       roughnessMap: roughness,
       roughness: 1,
       normalMap: normal,
-      normalScale: new THREE.Vector2(0.4, 0.4),
+      normalScale: new THREE.Vector2(0.2, 0.2),
       metalness: 0,
       anisotropy: 0.8,
       anisotropyMap: anisotropy,

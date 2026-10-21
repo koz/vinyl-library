@@ -274,13 +274,13 @@ const mix = (a: Zone, b: Zone, t: number): Zone => ({
 const LABEL: Zone = { roughness: 0.75, anisotropy: 0 }
 const DEAD_WAX: Zone = { roughness: 0.29, anisotropy: 0.15 }
 const LEAD_OUT: Zone = { roughness: 0.25, anisotropy: 0.2 }
-const GAP: Zone = { roughness: 0.25, anisotropy: 0.4 }
+const GAP: Zone = { roughness: 0.29, anisotropy: 0.4 }
 
 // Surface of the record at `f`, the distance from the centre as a fraction of its radius.
 // The groove sheen is kept fairly broad and every change is a soft ramp a few pixels wide:
 // a razor-sharp highlight or one-pixel edges make the record shimmer as it slides.
 function zoneAt(f: number): Zone {
-  const grooves: Zone = { roughness: 0.32 + grooveAt(f) * 0.075, anisotropy: 0.9 }
+  const grooves: Zone = { roughness: 0.34 + grooveAt(f) * 0.035, anisotropy: 0.9 }
   const gap = Math.max(...TRACK_GAPS.map((center) => 1 - smoothstep(0, GAP_WIDTH, Math.abs(f - center))))
   let zone = mix(grooves, GAP, gap)
   zone = mix(DEAD_WAX, zone, smoothstep(GROOVES_START - ZONE_RAMP, GROOVES_START, f))
@@ -323,7 +323,7 @@ export function getVinylMaps(): VinylMaps {
       // Slow changes in the pressing break up the otherwise perfectly circular sheen.
       const pressing = Math.sin(angle * 3 + f * 17) * Math.sin(angle * 5 - f * 9)
       const grain = random() - 0.5
-      const shade = 7 + recorded * (grooveAt(f) * 1.7 + fine * 0.8 + pressing * 0.35) + grain * 0.8
+      const shade = 7.6 + recorded * (grooveAt(f) * 0.85 + fine * 0.4 + pressing * 0.35) + grain * 0.8
       const i = (y * DISC_SIZE + x) * 4
       baseImage.data[i] = baseImage.data[i + 1] = baseImage.data[i + 2] = shade
       baseImage.data[i + 3] = 255
