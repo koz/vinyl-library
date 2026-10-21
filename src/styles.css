@@ -1,0 +1,368 @@
+:root {
+  --bg: #f5f2ec;
+  --surface: #fbfaf7;
+  --text: #2d2b28;
+  --muted: #7a756d;
+  --border: #e3ded5;
+  --accent: #5f6f62;
+  --accent-hover: #4f5e52;
+  --danger: #94574e;
+  --cover-bg: #e8e3da;
+  --radius: 6px;
+
+  color-scheme: light;
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+b,
+strong,
+th {
+  font-weight: 600;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* Buttons */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  border-color: #cfc8bc;
+}
+
+.button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.button-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fbfaf7;
+}
+
+.button-primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.button-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  color: var(--danger);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Notices and panels */
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.notice-error {
+  border-color: #dcc6c1;
+  color: var(--danger);
+}
+
+.panel {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.panel .actions {
+  margin-top: 4px;
+}
+
+.progress {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+/* Sign in */
+
+.sign-in {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.sign-in-panel {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.sign-in-panel .notice {
+  margin: 0;
+}
+
+.fine-print {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* Collection page */
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-line {
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.empty {
+  padding: 48px 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.records {
+  border-top: 1px solid var(--border);
+}
+
+.records-head {
+  display: none;
+}
+
+.record-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.record {
+  display: grid;
+  grid-template-columns: 70px auto 1fr;
+  grid-template-areas:
+    'cover artist artist'
+    'cover title title'
+    'cover year genre';
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cover {
+  grid-area: cover;
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin-right: 14px;
+  border-radius: 3px;
+  background: var(--cover-bg);
+  object-fit: cover;
+}
+
+.cover-missing {
+  background:
+    radial-gradient(circle, var(--bg) 0 3px, transparent 4px),
+    radial-gradient(circle, #ddd7cd 0 18px, transparent 19px),
+    var(--cover-bg);
+}
+
+.record-artist {
+  grid-area: artist;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.record-artist-name {
+  font-weight: 500;
+}
+
+.record-artist-alt {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.record-title {
+  grid-area: title;
+}
+
+.record-year,
+.record-genre {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.record-year {
+  grid-area: year;
+}
+
+.record-genre {
+  grid-area: genre;
+}
+
+.record-genre::before {
+  content: '·';
+  margin: 0 6px;
+}
+
+.record-artist-name,
+.record-artist-alt,
+.record-title,
+.record-genre {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.load-more {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.page-footer {
+  margin-top: 48px;
+}
+
+@media (min-width: 720px) {
+  .page {
+    padding: 40px 24px 64px;
+  }
+
+  .records-head,
+  .record {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1.2fr) minmax(0, 1.4fr) 72px minmax(0, 1fr);
+    grid-template-areas: 'cover artist title year genre';
+    column-gap: 20px;
+  }
+
+  .records-head {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .cover {
+    margin-right: 0;
+  }
+
+  .record-genre::before {
+    content: none;
+  }
+
+  .record-year,
+  .record-genre {
+    font-size: inherit;
+  }
+}
