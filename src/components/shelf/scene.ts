@@ -24,6 +24,7 @@ const PLANK_DEPTH = 56
 const WALL_Z = PLANK_FRONT - PLANK_DEPTH
 const SPIN_SPEED = (100 / 3 / 60) * Math.PI * 2
 const TRAVEL_SECONDS = 0.75
+const SHELF_CLEARANCE_FRACTION = 0.3
 const SLIDE_SECONDS = 0.9
 const SCRIM_OPACITY = 0.94
 const BACKGROUND = 0xf5f2ec
@@ -417,13 +418,18 @@ export class ShelfScene {
     const instant = this.reducedMotion.matches
 
     for (const sleeve of this.sleeves.values()) {
-      const target = this.hovered === sleeve.info.id && !this.selection ? 1 : 0
-      sleeve.tilt = approach(sleeve.tilt, target, instant ? Infinity : 12, dt)
-      if (Math.abs(sleeve.tilt - target) > 0.001) animating = true
+      const selected = this.selection?.sleeve === sleeve
+      // Hold the clicked pose throughout the selection, including a partial hover tilt.
+      // The travel animation blends it into the stage angle after clearing the plank.
+      if (!selected) {
+        const target = this.hovered === sleeve.info.id && !this.selection ? 1 : 0
+        sleeve.tilt = approach(sleeve.tilt, target, instant ? Infinity : 12, dt)
+        if (Math.abs(sleeve.tilt - target) > 0.001) animating = true
+      }
 
       const pose = this.rectPose(sleeve.element.getBoundingClientRect(), 0)
       pose.rx = LEAN + sleeve.tilt * HOVER_TILT
-      if (this.selection?.sleeve === sleeve) {
+      if (selected && this.selection) {
         animating = this.updateSelection(this.selection, pose, dt) || animating
       } else {
         this.applyPose(sleeve.group, pose)
@@ -469,14 +475,21 @@ export class ShelfScene {
     front.ry = -0.14
 
     const t = easeInOut(selection.travel)
-    const arc = Math.sin(Math.PI * t)
+    // Pull straight off the plank before moving toward the stage. Reversing this
+    // path aligns the sleeve with its slot before pushing it back onto the shelf.
+    const pull = easeInOut(Math.min(selection.travel / SHELF_CLEARANCE_FRACTION, 1))
+    const move = easeInOut(Math.max(
+      (selection.travel - SHELF_CLEARANCE_FRACTION) / (1 - SHELF_CLEARANCE_FRACTION),
+      0,
+    ))
+    const arc = Math.sin(Math.PI * move)
     this.applyPose(selection.sleeve.group, {
-      x: THREE.MathUtils.lerp(shelfPose.x, front.x, t),
-      y: THREE.MathUtils.lerp(shelfPose.y, front.y, t),
-      z: THREE.MathUtils.lerp(shelfPose.z, front.z, t) + arc * 80,
-      size: THREE.MathUtils.lerp(shelfPose.size, front.size, t),
-      rx: THREE.MathUtils.lerp(shelfPose.rx, front.rx, t),
-      ry: THREE.MathUtils.lerp(shelfPose.ry, front.ry, t) + arc * 0.45,
+      x: THREE.MathUtils.lerp(shelfPose.x, front.x, move),
+      y: THREE.MathUtils.lerp(shelfPose.y, front.y, move),
+      z: THREE.MathUtils.lerp(shelfPose.z, front.z, pull) + arc * 80,
+      size: THREE.MathUtils.lerp(shelfPose.size, front.size, move),
+      rx: THREE.MathUtils.lerp(shelfPose.rx, front.rx, move),
+      ry: THREE.MathUtils.lerp(shelfPose.ry, front.ry, move) + arc * 0.45,
     })
 
     selection.disc.position.x = SLIDE_DISTANCE * easeInOut(selection.slide)
