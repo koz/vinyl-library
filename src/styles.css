@@ -273,8 +273,13 @@ a {
   gap: 8px;
 }
 
+.page-header .actions {
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-left: auto;
+}
+
 .status-line {
-  margin-bottom: 12px;
   font-size: 0.9rem;
 }
 
@@ -534,15 +539,18 @@ a {
   }
 }
 
-.load-more {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-  margin-top: 24px;
+.scroll-sentinel {
+  height: 1px;
 }
 
 .page-footer {
+  display: grid;
   margin-top: 48px;
+}
+
+.page-footer > .link-button {
+  justify-self: end;
+  font-size: 0.75rem;
 }
 
 @media (min-width: 720px) {

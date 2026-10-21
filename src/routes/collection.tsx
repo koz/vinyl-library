@@ -39,6 +39,27 @@ function CollectionPage() {
   const [needsReauth, setNeedsReauth] = useState(false)
   const [shelfSupported, setShelfSupported] = useState(true)
   const importRun = useRef(0)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  const itemCount = items?.length ?? 0
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current
+    if (!sentinel || visible >= itemCount) return
+
+    let active = true
+    const observer = new IntersectionObserver((entries) => {
+      if (!active || !entries.some((entry) => entry.isIntersecting)) return
+      active = false
+      observer.disconnect()
+      setVisible((count) => Math.min(count + PAGE_SIZE, itemCount))
+    }, { rootMargin: '0px 0px 600px 0px' })
+    observer.observe(sentinel)
+
+    return () => {
+      active = false
+      observer.disconnect()
+    }
+  }, [visible, itemCount])
 
   // Discogs can't filter vinyl or sort by artist, so every page is read before the list is replaced.
   async function runImport() {
@@ -115,6 +136,11 @@ function CollectionPage() {
           </p>
         </div>
         <div className="actions">
+          {items && importing && (
+            <p className="status-line muted" role="status" aria-live="polite">
+              Updating from Discogs · {progressLabel(status)}
+            </p>
+          )}
           <button
             className="button button-icon button-refresh"
             type="button"
@@ -156,15 +182,7 @@ function CollectionPage() {
               <RecordList items={items.slice(0, visible)} />
             )}
             {visible < items.length && (
-              <div className="load-more">
-                <button
-                  className="button"
-                  type="button"
-                  onClick={() => setVisible((count) => count + PAGE_SIZE)}
-                >
-                  <ButtonLabel>Load more</ButtonLabel>
-                </button>
-              </div>
+              <div ref={loadMoreRef} className="scroll-sentinel" aria-hidden="true" />
             )}
           </>
         ) : (
@@ -229,13 +247,6 @@ function UpdateNotice({
   needsReauth: boolean
   onRetry: () => void
 }) {
-  if (status.state === 'importing') {
-    return (
-      <p className="status-line muted" role="status" aria-live="polite">
-        Updating from Discogs · {progressLabel(status)}
-      </p>
-    )
-  }
   if (status.state === 'failed' && !needsReauth) {
     return (
       <div className="notice" role="alert">
