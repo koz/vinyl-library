@@ -552,6 +552,14 @@ a {
   font-size: 0.8rem;
 }
 
+/* Keep the iframe mounted so it can initialize, without taking up space or
+   exposing controls until Spotify reports that the player is ready. */
+.spotify-album-pending {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .spotify-heading {
   display: flex;
   align-items: center;

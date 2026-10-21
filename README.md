@@ -24,7 +24,7 @@ Browse the vinyl in your Discogs collection. Built with TanStack Start, React an
 
 ## Spotify embed proof of concept
 
-Run `npm run dev`, open a record on the shelf, and paste a Spotify **album** link into “Listen on Spotify”. The player attempts to start playback; browsers may require pressing play inside Spotify’s player. If the controller doesn't become ready, it falls back to a standard embed and offers “Reload player”. Closing the record stops playback. Spotify determines whether full tracks or previews are available to the listener.
+Run `npm run dev` and open a record on the shelf. The Spotify section stays hidden while matching or initializing the player, and remains hidden if either fails. It appears once Spotify reports the player ready. Ambiguous matches show an album chooser after the search completes. “Change album” accepts a Spotify **album** link. The player attempts to start playback; browsers may require pressing play inside Spotify’s player. Closing the record stops playback. Spotify determines whether full tracks or previews are available to the listener.
 
 For automatic matching, add `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` from a Spotify developer app to `.env`, then restart the server. `SPOTIFY_MARKET` defaults to `NL`. Credentials and application tokens stay on the server; visitors don’t authorize Spotify with this app. Spotify developer access and quota restrictions still apply to searches.
 

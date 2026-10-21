@@ -9,6 +9,7 @@ import { ButtonLabel } from './ButtonLabel'
 export function SpotifyAlbumPrototype({ item, active = true }: { item: CollectionItem; active?: boolean }) {
   const search = useServerFn(matchSpotifyAlbum)
   const [albumId, setAlbumId] = useState<string | null>(null)
+  const [readyAlbumId, setReadyAlbumId] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<AlbumCandidate[]>([])
   const [choosing, setChoosing] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -21,6 +22,7 @@ export function SpotifyAlbumPrototype({ item, active = true }: { item: Collectio
 
   function select(id: string) {
     run.current++
+    if (id !== albumId) setReadyAlbumId(null)
     setAlbumId(id)
     setChoosing(false)
     setLoading(false)
@@ -68,8 +70,15 @@ export function SpotifyAlbumPrototype({ item, active = true }: { item: Collectio
     select(id)
   }
 
+  const visible = albumId ? readyAlbumId === albumId : !loading && candidates.length > 0
+
   return (
-    <section className="spotify-album" aria-label="Listen on Spotify">
+    <section
+      className={`spotify-album${visible ? '' : ' spotify-album-pending'}`}
+      aria-label="Listen on Spotify"
+      aria-hidden={!visible}
+      inert={!visible}
+    >
       <div className="spotify-heading">
         <span>Listen on Spotify</span>
         {albumId && (
@@ -81,7 +90,7 @@ export function SpotifyAlbumPrototype({ item, active = true }: { item: Collectio
           </button>
         )}
       </div>
-      {albumId && <SpotifyEmbedPrototype key={albumId} albumId={albumId} active={active} />}
+      {albumId && <SpotifyEmbedPrototype key={albumId} albumId={albumId} active={active} onReady={setReadyAlbumId} />}
       {storageFailed && <p className="muted" role="status">This choice couldn’t be saved in this browser.</p>}
       {(!albumId || choosing) && (
         <div className="spotify-choices">
@@ -151,32 +160,32 @@ function loadEmbedApi(): Promise<EmbedApi> {
   return embedApi
 }
 
-function SpotifyEmbedPrototype({ albumId, active }: { albumId: string; active: boolean }) {
+function SpotifyEmbedPrototype({ albumId, active, onReady }: {
+  albumId: string
+  active: boolean
+  onReady: (albumId: string | null) => void
+}) {
   const host = useRef<HTMLDivElement>(null)
   const controller = useRef<EmbedController | null>(null)
   const isActive = useRef(active)
   isActive.current = active
-  const [failed, setFailed] = useState(false)
-  const [attempt, setAttempt] = useState(0)
-  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     let timedOut = false
-    setFailed(false)
-    setReady(false)
+    onReady(null)
     const container = host.current!
     const target = document.createElement('div')
     container.append(target)
-    function fallback() {
+    function fail() {
       if (cancelled) return
       timedOut = true
       controller.current?.destroy()
       controller.current = null
       container.replaceChildren()
-      setFailed(true)
+      onReady(null)
     }
-    const readyTimeout = window.setTimeout(fallback, 10_000)
+    const readyTimeout = window.setTimeout(fail, 10_000)
     loadEmbedApi().then((api) => {
       if (cancelled || timedOut) return
       api.createController(target, { uri: `spotify:album:${albumId}`, width: '100%', height: 152 }, (instance) => {
@@ -185,8 +194,7 @@ function SpotifyEmbedPrototype({ albumId, active }: { albumId: string; active: b
         instance.addListener('ready', () => {
           if (cancelled || timedOut) return
           clearTimeout(readyTimeout)
-          setFailed(false)
-          setReady(true)
+          onReady(albumId)
           if (isActive.current) instance.play()
         })
       })
@@ -194,7 +202,7 @@ function SpotifyEmbedPrototype({ albumId, active }: { albumId: string; active: b
       // iframe wait for another interaction before loading a saved match.
       const iframe = container.querySelector('iframe')
       if (iframe) { iframe.loading = 'eager'; iframe.title = 'Spotify album player' }
-    }).catch(fallback)
+    }).catch(fail)
     return () => {
       cancelled = true
       clearTimeout(readyTimeout)
@@ -202,17 +210,13 @@ function SpotifyEmbedPrototype({ albumId, active }: { albumId: string; active: b
       controller.current = null
       container.replaceChildren()
     }
-  }, [albumId, attempt])
+  }, [albumId, onReady])
 
   useEffect(() => { if (!active) controller.current?.pause() }, [active])
 
   return (
     <div className="spotify-player">
-      <div ref={host} hidden={failed} />
-      {failed && <iframe src={`https://open.spotify.com/embed/album/${albumId}`} title="Spotify album player" height={152}
-        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" />}
-      <p className="muted" role="status">{failed ? 'Automatic playback didn’t connect. Press play in the player above.' : ready ? 'If playback doesn’t start, press play in Spotify’s player.' : 'Loading Spotify’s player…'}</p>
-      {failed && <button className="button spotify-retry" type="button" onClick={() => setAttempt((value) => value + 1)}><ButtonLabel>Reload player</ButtonLabel></button>}
+      <div ref={host} />
       <a href={`https://open.spotify.com/album/${albumId}`} target="_blank" rel="noreferrer">Open in Spotify</a>
     </div>
   )
