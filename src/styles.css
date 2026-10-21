@@ -164,12 +164,6 @@ a {
   outline: none;
 }
 
-.button:focus-visible,
-.link-button:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 3px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .button,
   .link-button,
