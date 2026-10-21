@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
+import { RotateCw } from 'lucide-react'
+import { ButtonLabel } from '../components/ButtonLabel'
 import { VinylShelf } from '../components/shelf/VinylShelf'
 import { sortItems, type CollectionItem, type ImportedItem } from '../lib/collection'
 import { deleteAllCollections, loadCollection, saveCollection } from '../lib/collection-cache'
@@ -114,15 +116,18 @@ function CollectionPage() {
         </div>
         <div className="actions">
           <button
-            className="button"
+            className="button button-icon button-refresh"
             type="button"
             onClick={runImport}
             disabled={importing || needsReauth}
+            aria-label={importing ? 'Updating collection' : 'Refresh collection'}
+            aria-busy={importing}
+            title={importing ? 'Updating…' : 'Refresh collection'}
           >
-            {importing ? 'Updating…' : 'Refresh'}
+            <RotateCw size="0.875rem" strokeWidth={1} aria-hidden="true" />
           </button>
           <button className="button" type="button" onClick={handleSignOut}>
-            Sign out
+            <ButtonLabel>Logout</ButtonLabel>
           </button>
         </div>
       </header>
@@ -132,7 +137,7 @@ function CollectionPage() {
           <div className="notice notice-error" role="alert">
             <span>Discogs access was revoked or has expired. Reconnect to update your collection.</span>
             <a className="button button-primary" href="/auth/discogs/start">
-              Reconnect
+              <ButtonLabel>Reconnect</ButtonLabel>
             </a>
           </div>
         )}
@@ -157,7 +162,7 @@ function CollectionPage() {
                   type="button"
                   onClick={() => setVisible((count) => count + PAGE_SIZE)}
                 >
-                  Load more
+                  <ButtonLabel>Load more</ButtonLabel>
                 </button>
               </div>
             )}
@@ -190,7 +195,7 @@ function FirstImport({ status, onRetry }: { status: ImportStatus; onRetry: () =>
       <div className="panel" role="alert">
         <p>{importErrorMessage(status)}</p>
         <button className="button" type="button" onClick={onRetry}>
-          Try again
+          <ButtonLabel>Try again</ButtonLabel>
         </button>
       </div>
     )
@@ -236,7 +241,7 @@ function UpdateNotice({
       <div className="notice" role="alert">
         <span>{importErrorMessage(status)} Showing your last saved collection.</span>
         <button className="button" type="button" onClick={onRetry}>
-          Retry
+          <ButtonLabel>Retry</ButtonLabel>
         </button>
       </div>
     )
@@ -328,16 +333,16 @@ function DisconnectSection({ onConfirm }: { onConfirm: () => Promise<void> }) {
           {failed && <p className="notice notice-error">Couldn’t disconnect. Please try again.</p>}
           <div className="actions">
             <button className="button" type="button" onClick={() => setConfirming(false)} disabled={working}>
-              Cancel
+              <ButtonLabel>Cancel</ButtonLabel>
             </button>
             <button className="button button-danger" type="button" onClick={confirm} disabled={working}>
-              {working ? 'Disconnecting…' : 'Disconnect and delete data'}
+              <ButtonLabel>{working ? 'Disconnecting…' : 'Disconnect and delete data'}</ButtonLabel>
             </button>
           </div>
         </div>
       ) : (
         <button className="link-button" type="button" onClick={() => setConfirming(true)}>
-          Disconnect and delete app data
+          <ButtonLabel>Disconnect and delete app data</ButtonLabel>
         </button>
       )}
     </footer>

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
 import appCss from '../styles.css?url'
+import { ButtonLabel } from '../components/ButtonLabel'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -28,7 +29,7 @@ function Message({ title, body }: { title: string; body: string }) {
         <h1>{title}</h1>
         <p className="muted">{body}</p>
         <a className="button" href="/">
-          Go to Vinyl Library
+          <ButtonLabel>Go to Vinyl Library</ButtonLabel>
         </a>
       </div>
     </main>

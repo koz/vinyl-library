@@ -1,5 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { getViewer } from '../server/functions'
+import { ButtonLabel } from '../components/ButtonLabel'
 
 const LOGIN_ERRORS = {
   denied: 'Discogs access wasn’t granted. Connect again whenever you’re ready.',
@@ -36,7 +37,7 @@ function SignIn() {
           </p>
         )}
         <a className="button button-primary" href="/auth/discogs/start">
-          Connect Discogs
+          <ButtonLabel>Connect Discogs</ButtonLabel>
         </a>
         <p className="fine-print">
           You’ll approve access on Discogs. This app only reads your collection.

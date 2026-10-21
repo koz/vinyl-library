@@ -9,6 +9,7 @@ import {
   type PointerEvent,
 } from 'react'
 import type { CollectionItem } from '../../lib/collection'
+import { ButtonLabel } from '../ButtonLabel'
 import { STAGE_ASPECT, columnsFor } from './layout'
 import type { ShelfScene } from './scene'
 
@@ -268,11 +269,8 @@ function StageView({
             target="_blank"
             rel="noreferrer"
           >
-            View on Discogs
+            <ButtonLabel>View on Discogs</ButtonLabel>
           </a>
-          <button className="button" type="button" onClick={onClose}>
-            Back to shelf
-          </button>
         </div>
       </section>
     </div>

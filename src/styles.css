@@ -69,25 +69,32 @@ a {
 
 /* Buttons */
 
-.button {
+.button,
+.link-button {
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.button,
+.link-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 36px;
-  padding: 0 14px;
-  border: 1px solid var(--border);
+  padding: 0 8px;
+  border: 1px solid transparent;
   border-radius: var(--radius);
-  background: var(--surface);
+  background: transparent;
   color: var(--text);
   font: inherit;
+  font-size: 0.875rem;
   font-weight: 500;
-  text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
 }
 
 .button:hover:not(:disabled) {
-  border-color: #cfc8bc;
+  color: var(--accent-hover);
 }
 
 .button:disabled {
@@ -96,38 +103,80 @@ a {
 }
 
 .button-primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #fbfaf7;
+  color: var(--accent);
 }
 
-.button-primary:hover:not(:disabled) {
-  border-color: var(--accent-hover);
-  background: var(--accent-hover);
-}
-
-.button-danger {
-  border-color: var(--danger);
+.button-danger,
+.button-danger:hover:not(:disabled) {
   color: var(--danger);
+}
+
+.button-icon {
+  width: 36px;
+  padding: 0;
+  text-decoration: none;
+}
+
+.button-refresh svg {
+  transition: transform 250ms ease;
+}
+
+.button-refresh svg path {
+  vector-effect: non-scaling-stroke;
+}
+
+.button-refresh:is(:hover, :focus-visible):not(:disabled) svg {
+  transform: rotate(90deg);
 }
 
 .link-button {
-  padding: 0;
-  border: 0;
-  background: none;
   color: var(--muted);
-  font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
 }
 
-.link-button:hover {
+.link-button:hover:not(:disabled) {
   color: var(--danger);
+}
+
+.button-label {
+  position: relative;
+  display: inline-block;
+}
+
+.button-underline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  text-decoration-line: underline;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 1px;
+  text-underline-offset: auto;
+  text-decoration-skip-ink: auto;
+  clip-path: inset(0 100% -0.3em 0.06em);
+  transition: clip-path 220ms ease;
+}
+
+.button:is(:hover, :focus-visible):not(:disabled) .button-underline,
+.link-button:is(:hover, :focus-visible):not(:disabled) .button-underline {
+  clip-path: inset(0 0 -0.3em 0.06em);
 }
 
 :focus {
   outline: none;
+}
+
+.button:focus-visible,
+.link-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .link-button,
+  .button-underline,
+  .button-refresh svg {
+    transition: none;
+  }
 }
 
 /* Notices and panels */
@@ -426,6 +475,10 @@ a {
   font-size: 1.5rem;
   line-height: 1.2;
   letter-spacing: -0.01em;
+}
+
+.stage-details .actions {
+  margin-inline-start: -8px;
 }
 
 .stage-artist {
