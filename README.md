@@ -1,36 +1,111 @@
+<div align="center">
+
 # Vinyl Library
 
-Browse the vinyl in your Discogs collection. Built with TanStack Start, React and TypeScript. No database.
+**Your Discogs collection, on a shelf.**
 
-## Setup
+Browse your records, take a closer look at the artwork, and share your collection with a link.
 
-1. Register an application at <https://www.discogs.com/settings/developers> and set its callback URL to `http://localhost:3000/auth/discogs/callback`.
-2. Copy `.env.example` to `.env` and fill in the Discogs consumer key/secret and a `TOKEN_ENCRYPTION_KEY` (`openssl rand -base64 32`).
-3. Run `npm install`, then `npm run dev`, and open <http://localhost:3000>.
+[Features](#features) · [Get started](#get-started) · [Spotify playback](#spotify-playback-optional) · [Your data](#your-data)
 
-## How it works
+</div>
 
-- **Sign-in:** Discogs OAuth 1.0a, handled on the server (`src/routes/auth/discogs`). The Discogs access token is kept in an AES-256-GCM encrypted, HTTP-only cookie that lasts 30 days (`src/server/session.server.ts`). Browser JavaScript can’t read it, and the server holds no per-user state.
-- **Collection:** Discogs can’t filter by format or sort by artist then title. The browser asks the server for each page of the collection; the server returns only the vinyl entries, and the browser sorts the full list once every page has arrived. The sorted list is saved in the browser (IndexedDB), so the next visit shows it straight away while a refresh runs.
-- **Shelf:** the collection is shown as records standing on wooden shelves, drawn with three.js in one fixed, full-viewport canvas (`src/components/shelf`). WebGPU uses `WoodNodeMaterial` with reference-based oak fiber color, relief and roughness; the WebGL backend uses the same texture maps. The supplied reference is saved in `src/assets/oak-fibers.jpg`, with brightness 1.4, warmth 0.3, grain density 2.55, roughness 0.7 and no surface relief. Each shelf gets a random grain position that stays fixed while scrolling. Texture coordinates preserve the grain's physical scale across plank faces and viewport sizes. The page lays out invisible slot buttons, and each frame the 3D sleeves are placed over them, so scrolling, hovering, keyboard focus and clicks all stay in the DOM. Sleeves are only created, and their covers only loaded, while they are near the viewport. Clicking a sleeve brings it to the front, slides the record 30% out and spins it at 33⅓ rpm. If neither graphics backend is available, the page falls back to a plain list.
-- **Covers** are fetched through `/api/cover`, a same-origin proxy limited to `i.discogs.com`, because Discogs images have no CORS headers and WebGL can't read them otherwise.
-- **Sharing:** click **Share** between Refresh and Logout to copy a link directly to the clipboard. A small toast confirms the copy and disappears after three seconds. `/share?data=…` opens a read-only snapshot without a Discogs login, including for visitors already signed in to another account. The URL contains only the username and displayed record metadata, with versioned tuples compressed using native Deflate and base64url; it never includes credentials or saves the recipient's snapshot to their collection cache. Anyone with the link can read it; the snapshot stays fixed until you create a new link. The shelf, record details, Discogs links, and list fallback are shared; the Spotify matching prototype remains available only in the owner's view. The cover proxy serves public Discogs artwork without a session while retaining its host restrictions. Broken or unsupported links show an error. Links are capped at 8,000 characters to stay below common request-line limits; larger collections show an explicit error instead of sharing an incomplete collection. Decoding also bounds decompressed data and validates every record.
-- **Sign out** clears the cookie. **Disconnect** also deletes the collection saved in that browser. Neither affects other devices or Discogs itself; users can revoke access everywhere in their Discogs application settings.
+![Vinyl Library displaying album covers on wooden shelves](docs/images/collection.jpg)
 
-## Scripts
+Vinyl Library turns your Discogs collection into an interactive record shelf. Connect your account and start browsing. The app only reads your collection; your Discogs records stay unchanged.
 
-- `npm run dev`: development server
-- `npm run build`: production build
-- `npm run typecheck`, `npm test`
+## Features
 
-## Spotify embed proof of concept
+- **Browse the artwork.** Wooden 3D shelves adapt to desktop and mobile screens. Vinyl records are arranged by artist, then album title.
+- **Pick up a record.** Click or tap a sleeve to see the vinyl slide out and spin. Explore release details or open Discogs. Click the sleeve again or press **Escape** to put it back.
+- **Stay up to date.** A saved copy appears on return visits while Discogs updates load. Use the refresh button after adding records.
+- **Share your shelf.** Click **Share** to copy a collection snapshot link. Visitors can browse without signing in.
+- **Listen as you browse.** Optional Spotify setup adds an album player to matching records.
 
-Run `npm run dev` and open a record on the shelf. The Spotify section stays hidden while matching or initializing the player, and remains hidden if either fails or there is no automatic match. It fades in once Spotify reports the player ready. The player attempts to start playback; browsers may require pressing play inside Spotify’s player. Closing the record stops playback. Spotify determines whether full tracks or previews are available to the listener.
+Keyboard navigation is supported. Browsers without 3D graphics support show a simple record list.
 
-For automatic matching, add `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` from a Spotify developer app to `.env`, then restart the server. `SPOTIFY_MARKET` defaults to `NL`. Credentials and application tokens stay on the server; visitors don’t authorize Spotify with this app. Spotify developer access and quota restrictions still apply to searches.
+<details>
+<summary>Take a closer look at a record</summary>
 
-Only the selected record is searched. Artist/title matches are ranked, with year used as a small tie-breaker. An exact artist/title match with a clear lead is selected automatically. Listings with the same normalized title, complete artist credits, and release year are treated as one candidate for this decision: the first listing wins. Missing or ambiguous matches leave the entire Spotify section omitted. Pressing and digital release years can differ, so year is never a required match. Tracklist/barcode matching and cross-device storage are outside this proof of concept.
+![Sound & Color by Alabama Shakes, with the vinyl partly out of its sleeve and release details alongside](docs/images/record-details.jpg)
 
-Matches are saved by Discogs release ID in localStorage, separately from collection imports, and survive refreshes in that browser. “Disconnect and delete app data” removes them. If browser storage is unavailable, playback still works for the current visit. The prototype lives in `src/components/SpotifyAlbumPrototype.tsx` on `codex/spotify-embed-poc`; the question to validate is whether conservative automatic matching gives a useful listening experience. Actual full-track playback needs verification in your Spotify session.
+</details>
 
-Validated locally: pasting ABBA’s Arrival loaded the album and started playback; closing paused it, and the saved match survived reopening and reloading. Desktop and 390px mobile layouts were inspected. Matching and search handling were exercised with mocked Spotify responses (including ambiguous editions, token reuse, fallback search, and 403/429 responses). After configuring Spotify credentials, live catalog matching and playback were verified for Alabama Shakes’ Sound & Color.
+## Get started
+
+You’ll need **Node.js 22.12 or later**, **npm**, and a **Discogs account** with records in its collection.
+
+### 1. Register a Discogs application
+
+Create an application in your [Discogs developer settings](https://www.discogs.com/settings/developers). Set its callback URL to:
+
+```text
+http://localhost:3000/auth/discogs/callback
+```
+
+Keep its consumer key and consumer secret for the next step.
+
+### 2. Configure the app
+
+From the project directory:
+
+```bash
+npm ci
+cp .env.example .env
+```
+
+In `.env`, fill in `DISCOGS_CONSUMER_KEY` and `DISCOGS_CONSUMER_SECRET`. Generate a key for `TOKEN_ENCRYPTION_KEY` with:
+
+```bash
+openssl rand -base64 32
+```
+
+Paste the output into that setting. Leave the other defaults as supplied; Spotify settings can stay empty.
+
+### 3. Open your shelf
+
+```bash
+npm run dev
+```
+
+Open [localhost:3000](http://localhost:3000), choose **Connect Discogs**, and approve access on Discogs. Your vinyl collection imports automatically. Large collections take longer on the first visit.
+
+> [!TIP]
+> Using another address? Update `APP_URL`, `DISCOGS_USER_AGENT`, and the Discogs callback URL to match. Use HTTPS when hosting online, and keep `.env` private.
+
+## Spotify playback (optional)
+
+Spotify playback is experimental. Create an app in the [Spotify developer dashboard](https://developer.spotify.com/dashboard), add its `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` to `.env`, and restart the server. `SPOTIFY_MARKET` defaults to `NL`; change it to your two-letter country code if needed.
+
+Opening a record looks for a confident artist-and-title match. The player appears when ready, and matches are remembered in that browser. Closing the record stops playback. Shared shelves don’t include Spotify.
+
+> [!NOTE]
+> Spotify access and catalog availability can limit matching. Spotify determines whether you hear full tracks or previews; your browser may require pressing play. No Spotify authorization through Vinyl Library is needed.
+
+## Your data
+
+Your collection and Spotify matches are saved in your browser. Sign-in credentials stay in an encrypted cookie inaccessible to browser JavaScript. No database is needed, and no collection or account credentials are saved in server-side storage.
+
+- **Logout** ends your session and keeps saved browser data.
+- **Disconnect and delete app data** also removes saved collections and Spotify matches from that browser. Discogs and other devices are unaffected.
+- To revoke the app’s access across devices, use your [Discogs application settings](https://www.discogs.com/settings/applications).
+
+> [!IMPORTANT]
+> Anyone with a share link can view its username and records. Links contain a fixed snapshot with no sign-in credentials. Create a new link to share updates. Very large collections may exceed the link size limit; the app reports this rather than leaving records out.
+
+## Project commands
+
+Built with TanStack Start, React, TypeScript, and Three.js.
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the local app at port 3000. |
+| `npm run build` | Create a production build. |
+| `npm run typecheck` | Check TypeScript types. |
+| `npm test` | Run the automated tests. |
+
+## Troubleshooting
+
+- **Can’t connect?** Check your Discogs key, secret, and callback URL. Restart after changing `.env`. For expired or revoked access, choose **Reconnect**.
+- **Refresh failed?** If Discogs is limiting requests, wait a minute and retry. Your saved collection remains visible.
+- **Empty shelf?** Only Discogs releases marked as vinyl are imported.
