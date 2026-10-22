@@ -641,6 +641,8 @@ a {
     --stage-h: min(32vh, calc((100vw - 48px) / var(--stage-aspect)));
 
     flex-direction: column;
+    /* Keep the cover in place when the Spotify player becomes ready. */
+    justify-content: flex-start;
     gap: 24px;
   }
 
