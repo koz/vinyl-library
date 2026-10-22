@@ -10,7 +10,7 @@ type ShareState = { username: string; items: CollectionItem[] } & (
 export function ShareCollection({ username, items }: { username: string; items: CollectionItem[] | null }) {
   const [result, setResult] = useState<ShareState | null>(null)
   const [copying, setCopying] = useState(false)
-  const [toast, setToast] = useState<{ message: string; error: boolean } | null>(null)
+  const [toast, setToast] = useState<{ message: string; error: boolean; exiting?: boolean } | null>(null)
   const current = result?.username === username && result.items === items ? result : null
 
   // Prepare the URL before the click so clipboard access keeps the user's browser activation.
@@ -29,8 +29,10 @@ export function ShareCollection({ username, items }: { username: string; items: 
   }, [username, items])
 
   useEffect(() => {
-    if (!toast) return
-    const timer = window.setTimeout(() => setToast(null), toast.error ? 5_000 : 3_000)
+    if (!toast || toast.exiting) return
+    const timer = window.setTimeout(() => {
+      setToast((current) => current ? { ...current, exiting: true } : null)
+    }, toast.error ? 5_000 : 3_000)
     return () => window.clearTimeout(timer)
   }, [toast])
 
@@ -58,7 +60,13 @@ export function ShareCollection({ username, items }: { username: string; items: 
         <ButtonLabel>Share</ButtonLabel>
       </button>
       {toast && (
-        <div className={`toast${toast.error ? ' toast-error' : ''}`} role={toast.error ? 'alert' : 'status'}>
+        <div className={`toast${toast.error ? ' toast-error' : ''}${toast.exiting ? ' toast-exiting' : ''}`}
+          role={toast.error ? 'alert' : 'status'}
+          onAnimationEnd={(event) => {
+            if (event.animationName === 'toast-out') {
+              setToast((current) => current?.exiting ? null : current)
+            }
+          }}>
           {toast.message}
         </div>
       )}
