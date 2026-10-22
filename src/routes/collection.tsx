@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
-import { RotateCw } from 'lucide-react'
 import { ButtonLabel } from '../components/ButtonLabel'
+import { CollectionHeader } from '../components/CollectionHeader'
 import { CollectionView } from '../components/CollectionView'
-import { ShareCollection } from '../components/ShareCollection'
+import { InitialImportFailure } from '../components/InitialImportFailure'
 import { sortItems, type ImportedItem } from '../lib/collection'
 import { deleteAllCollections, loadCollection, saveCollection } from '../lib/collection-cache'
 import { deleteSpotifyMatches } from '../lib/spotify'
@@ -12,7 +12,7 @@ import { fetchCollectionPage, getViewer, signOut, type ImportError } from '../se
 
 type ImportStatus =
   | { state: 'idle' }
-  | { state: 'importing'; pagesDone: number; pagesTotal: number | null }
+  | { state: 'importing' }
   | { state: 'failed'; error: ImportError }
 
 export const Route = createFileRoute('/collection')({
@@ -41,7 +41,7 @@ function CollectionPage() {
   async function runImport() {
     const run = ++importRun.current
     const isCurrent = () => run === importRun.current
-    setStatus({ state: 'importing', pagesDone: 0, pagesTotal: null })
+    setStatus({ state: 'importing' })
 
     const collected: ImportedItem[] = []
     let page = 1
@@ -57,7 +57,6 @@ function CollectionPage() {
         }
         pages = result.pages
         collected.push(...result.items)
-        setStatus({ state: 'importing', pagesDone: page, pagesTotal: pages })
         page++
       } while (page <= pages)
     } catch {
@@ -104,37 +103,15 @@ function CollectionPage() {
 
   return (
     <div className="page">
-      <header className="page-header">
-        <div>
-          <h1>Vinyl Library</h1>
-          <p className="muted">
-            {viewer.username}
-            {items && ` · ${items.length} ${items.length === 1 ? 'record' : 'records'}`}
-          </p>
-        </div>
-        <div className="actions">
-          {items && importing && (
-            <p className="status-line muted" role="status" aria-live="polite">
-              Updating from Discogs{status.pagesTotal ? ` · ${progressLabel(status)}` : ''}
-            </p>
-          )}
-          <button
-            className="button button-icon button-refresh"
-            type="button"
-            onClick={runImport}
-            disabled={importing || needsReauth}
-            aria-label={importing ? 'Updating collection' : 'Refresh collection'}
-            aria-busy={importing}
-            title={importing ? 'Updating…' : 'Refresh collection'}
-          >
-            <RotateCw size="0.875rem" strokeWidth={1} aria-hidden="true" />
-          </button>
-          <ShareCollection username={viewer.username} items={items} />
-          <button className="button" type="button" onClick={handleSignOut}>
-            <ButtonLabel>Logout</ButtonLabel>
-          </button>
-        </div>
-      </header>
+      <CollectionHeader
+        username={viewer.username}
+        items={items}
+        importing={importing}
+        failed={items !== null && status.state === 'failed'}
+        needsReauth={needsReauth}
+        onRefresh={runImport}
+        onSignOut={handleSignOut}
+      />
 
       <main>
         {needsReauth && (
@@ -147,66 +124,18 @@ function CollectionPage() {
         )}
 
         {firstImportFailed ? (
-          !needsReauth && <FirstImportError status={status} onRetry={runImport} />
+          !needsReauth && <InitialImportFailure onRetry={runImport} />
         ) : (
-          <>
-            {items && <UpdateNotice status={status} needsReauth={needsReauth} onRetry={runImport} />}
-            <CollectionView
-              items={items}
-              emptyMessage="There’s no vinyl in your Discogs collection yet."
-            />
-          </>
+          <CollectionView
+            items={items}
+            emptyMessage="There’s no vinyl in your Discogs collection yet."
+          />
         )}
       </main>
 
       <DisconnectSection onDisconnect={handleDisconnect} />
     </div>
   )
-}
-
-function importErrorMessage(status: ImportStatus): string {
-  if (status.state === 'failed' && status.error === 'rate_limited') {
-    return 'Discogs is limiting requests right now. Try again in a minute.'
-  }
-  return 'Couldn’t update your collection from Discogs.'
-}
-
-function progressLabel(status: Extract<ImportStatus, { state: 'importing' }>): string {
-  if (!status.pagesTotal) return 'Starting…'
-  return `Read ${status.pagesDone} of ${status.pagesTotal} ${status.pagesTotal === 1 ? 'page' : 'pages'}`
-}
-
-function FirstImportError({ status, onRetry }: { status: ImportStatus; onRetry: () => void }) {
-  return (
-    <div className="panel" role="alert">
-      <p>{importErrorMessage(status)}</p>
-      <button className="button" type="button" onClick={onRetry}>
-        <ButtonLabel>Try again</ButtonLabel>
-      </button>
-    </div>
-  )
-}
-
-function UpdateNotice({
-  status,
-  needsReauth,
-  onRetry,
-}: {
-  status: ImportStatus
-  needsReauth: boolean
-  onRetry: () => void
-}) {
-  if (status.state === 'failed' && !needsReauth) {
-    return (
-      <div className="notice" role="alert">
-        <span>{importErrorMessage(status)} Showing your last saved collection.</span>
-        <button className="button" type="button" onClick={onRetry}>
-          <ButtonLabel>Retry</ButtonLabel>
-        </button>
-      </div>
-    )
-  }
-  return null
 }
 
 function DisconnectSection({ onDisconnect }: { onDisconnect: () => Promise<void> }) {

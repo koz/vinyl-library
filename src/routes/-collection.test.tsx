@@ -54,11 +54,29 @@ describe('first collection loading', () => {
     expectSpinnerOnly(render([null, { state: 'importing', pagesDone: 1, pagesTotal: 3 }]))
   })
 
+  it('shows only the update label while refreshing a saved collection', () => {
+    const html = render([[], { state: 'importing' }])
+    expect(html).toContain('Updating from Discogs</p>')
+    expect(html).not.toContain('Read 1 of')
+    expect(html).not.toContain('Failed to update from Discogs')
+  })
+
+  it('shows a fading header error instead of a saved-collection error notice', () => {
+    const html = render([[], { state: 'failed', error: 'failed' }])
+    expect(html).toContain('class="status-line status-line-error" role="alert"')
+    expect(html).toContain('Failed to update from Discogs')
+    expect(html).not.toContain('Showing your last saved collection.')
+  })
+
   it('shows an actionable error if the first import fails', () => {
     const html = render([null, { state: 'failed', error: 'rate_limited' }])
-    expect(html).toContain('Discogs is limiting requests')
-    expect(html).toContain('Try again')
+    expect(html).toContain('Failed to import collection from Discogs, click')
+    expect(html).toContain('<a class="inline-link" href="/collection">')
+    expect(html).toContain('<span class="button-label">here')
+    expect(html).toContain('</a> to try again.')
     expect(html).not.toContain('shelf-spinner')
+    expect(html).not.toContain('class="panel"')
+    expect(html).not.toContain('Failed to update from Discogs')
   })
 
   it('keeps reconnect available for expired access', () => {

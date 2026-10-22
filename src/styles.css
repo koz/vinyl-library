@@ -70,7 +70,8 @@ a {
 /* Buttons */
 
 .button,
-.link-button {
+.link-button,
+.inline-link {
   text-decoration: none;
   transition: color 180ms ease;
 }
@@ -156,7 +157,8 @@ a {
 }
 
 .button:is(:hover, :focus-visible):not(:disabled) .button-underline,
-.link-button:is(:hover, :focus-visible):not(:disabled) .button-underline {
+.link-button:is(:hover, :focus-visible):not(:disabled) .button-underline,
+.inline-link:is(:hover, :focus-visible) .button-underline {
   clip-path: inset(0 0 -0.3em 0.06em);
 }
 
@@ -167,6 +169,7 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .button,
   .link-button,
+  .inline-link,
   .button-underline,
   .button-refresh svg {
     transition: none;
@@ -262,6 +265,22 @@ a {
 
 .status-line {
   font-size: 0.9rem;
+}
+
+.status-line-error {
+  color: var(--danger);
+  animation: update-failure-out 10s ease-in forwards;
+}
+
+@keyframes update-failure-out {
+  0%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-line-error {
+    animation: none;
+  }
 }
 
 .toast {
@@ -423,6 +442,15 @@ a {
   /* Animate an HTML layer so rotation continues while the 3D scene blocks the main thread. */
   will-change: transform;
   animation: shelf-spin 800ms linear infinite;
+}
+
+.shelf-import-error {
+  padding: 24px;
+  text-align: center;
+}
+
+.shelf-import-error a {
+  pointer-events: auto;
 }
 
 @keyframes shelf-spin {
