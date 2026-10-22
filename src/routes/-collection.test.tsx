@@ -60,9 +60,10 @@ describe('first collection loading', () => {
     expectSpinnerOnly(render([null, { state: 'importing', pagesDone: 1, pagesTotal: 3 }]))
   })
 
-  it('shows only the update label while refreshing a saved collection', () => {
+  it('marks the refresh icon busy without an update message while refreshing a saved collection', () => {
     const html = render([[], { state: 'importing' }])
-    expect(html).toContain('Updating from Discogs</p>')
+    expect(html).toContain('aria-label="Updating collection" aria-busy="true"')
+    expect(html).not.toContain('Updating from Discogs')
     expect(html).not.toContain('Read 1 of')
     expect(html).not.toContain('Failed to update from Discogs')
     expect(html).toContain('Disconnect and delete data')

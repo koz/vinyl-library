@@ -122,12 +122,16 @@ a {
   transition: transform 250ms ease;
 }
 
-.button-refresh svg path {
-  vector-effect: non-scaling-stroke;
-}
-
 .button-refresh:is(:hover, :focus-visible):not(:disabled) svg {
   transform: rotate(90deg);
+}
+
+.button-refresh[aria-busy="true"] svg {
+  animation: refresh-spin 800ms linear infinite;
+}
+
+@keyframes refresh-spin {
+  to { transform: rotate(360deg); }
 }
 
 .link-button {
@@ -173,6 +177,10 @@ a {
   .button-underline,
   .button-refresh svg {
     transition: none;
+  }
+
+  .button-refresh[aria-busy="true"] svg {
+    animation: none;
   }
 }
 

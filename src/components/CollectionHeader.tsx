@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { RotateCw } from 'lucide-react'
 import type { CollectionItem } from '../lib/collection'
 import { ButtonLabel } from './ButtonLabel'
 import { ShareCollection } from './ShareCollection'
+import { RefreshVinylIcon } from './RefreshVinylIcon'
 
 export function CollectionHeader({
   username,
@@ -31,11 +31,6 @@ export function CollectionHeader({
         </p>
       </div>
       <div className="actions">
-        {items && importing && (
-          <p className="status-line muted" role="status" aria-live="polite">
-            Updating from Discogs
-          </p>
-        )}
         {failed && !importing && <UpdateFailure />}
         <button
           className="button button-icon button-refresh"
@@ -46,7 +41,7 @@ export function CollectionHeader({
           aria-busy={importing}
           title={importing ? 'Updating…' : 'Refresh collection'}
         >
-          <RotateCw size="0.875rem" strokeWidth={1} aria-hidden="true" />
+          <RefreshVinylIcon />
         </button>
         <ShareCollection username={username} items={items} />
         <button className="button" type="button" onClick={onSignOut}>
