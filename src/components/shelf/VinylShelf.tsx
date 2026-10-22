@@ -262,7 +262,7 @@ function StageView({
         aria-label={`Put ${item.title} back on the shelf`}
         onClick={onClose}
       />
-      <section className="stage-details">
+      <section className="stage-details" data-lenis-prevent>
         <p className="stage-artist">
           {item.artist}
           {item.artistAlt && <span className="muted"> · {item.artistAlt}</span>}

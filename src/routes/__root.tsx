@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
 import appCss from '../styles.css?url'
 import { ButtonLabel } from '../components/ButtonLabel'
+import { useSmoothScroll } from '../hooks/useSmoothScroll'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -37,6 +38,8 @@ function Message({ title, body }: { title: string; body: string }) {
 }
 
 function RootComponent() {
+  useSmoothScroll()
+
   return (
     <RootDocument>
       <Outlet />
