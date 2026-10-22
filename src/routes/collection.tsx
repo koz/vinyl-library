@@ -124,16 +124,18 @@ function CollectionPage() {
         )}
 
         {firstImportFailed ? (
-          !needsReauth && <InitialImportFailure onRetry={runImport} />
+          <>
+            {!needsReauth && <InitialImportFailure onRetry={runImport} />}
+            <DisconnectSection onDisconnect={handleDisconnect} />
+          </>
         ) : (
           <CollectionView
             items={items}
             emptyMessage="There’s no vinyl in your Discogs collection yet."
+            footer={<DisconnectSection onDisconnect={handleDisconnect} />}
           />
         )}
       </main>
-
-      <DisconnectSection onDisconnect={handleDisconnect} />
     </div>
   )
 }

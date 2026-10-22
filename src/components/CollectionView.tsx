@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { CollectionItem } from '../lib/collection'
 import { VinylShelf } from './shelf/VinylShelf'
 import { LoadingRecords } from './LoadingRecords'
 
 const PAGE_SIZE = 50
 
-export function CollectionView({ items, shared = false, emptyMessage }: {
+export function CollectionView({ items, shared = false, emptyMessage, footer }: {
   items: CollectionItem[] | null
   shared?: boolean
   emptyMessage: string
+  footer?: ReactNode
 }) {
   const [visible, setVisible] = useState(PAGE_SIZE)
   const [shelfSupported, setShelfSupported] = useState(true)
@@ -53,6 +54,7 @@ export function CollectionView({ items, shared = false, emptyMessage }: {
       {items && visible < items.length && (
         <div ref={loadMoreRef} className="scroll-sentinel" aria-hidden="true" />
       )}
+      {!loading && footer}
     </>
   )
 }

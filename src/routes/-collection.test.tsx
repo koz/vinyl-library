@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { CollectionItem } from '../lib/collection'
 
+const item: CollectionItem = {
+  instanceId: 1, releaseId: 1, artist: 'Artist', artistAlt: null, title: 'Album',
+  year: 2020, genre: 'Jazz', coverUrl: null, thumbUrl: null,
+}
+
 const fixture = vi.hoisted(() => ({
   states: [] as unknown[],
   cursor: 0,
@@ -41,6 +46,7 @@ function expectSpinnerOnly(html: string) {
   expect(html).not.toContain('class="panel"')
   expect(html).not.toContain('class="progress"')
   expect(html).not.toContain('Importing your collection from Discogs')
+  expect(html).not.toContain('Disconnect and delete data')
 }
 
 beforeEach(() => { fixture.cursor = 0 })
@@ -59,6 +65,7 @@ describe('first collection loading', () => {
     expect(html).toContain('Updating from Discogs</p>')
     expect(html).not.toContain('Read 1 of')
     expect(html).not.toContain('Failed to update from Discogs')
+    expect(html).toContain('Disconnect and delete data')
   })
 
   it('shows a fading header error instead of a saved-collection error notice', () => {
@@ -77,19 +84,33 @@ describe('first collection loading', () => {
     expect(html).not.toContain('shelf-spinner')
     expect(html).not.toContain('class="panel"')
     expect(html).not.toContain('Failed to update from Discogs')
+    expect(html).toContain('Disconnect and delete data')
   })
 
   it('keeps reconnect available for expired access', () => {
     const html = render([null, { state: 'failed', error: 'reauth' }, true])
     expect(html).toContain('Reconnect')
     expect(html).not.toContain('shelf-spinner')
+    expect(html).toContain('Disconnect and delete data')
   })
 
   it('shows the spinner while the imported shelf initializes', () => {
-    const item: CollectionItem = {
-      instanceId: 1, releaseId: 1, artist: 'Artist', artistAlt: null, title: 'Album',
-      year: 2020, genre: 'Jazz', coverUrl: null, thumbUrl: null,
-    }
     expectSpinnerOnly(render([[item], { state: 'idle' }]))
+  })
+
+  it('shows disconnect once the shelf is ready, including during a background refresh', () => {
+    for (const state of ['idle', 'importing']) {
+      // Route, share button, then CollectionView's visible/supported/ready state.
+      const html = render([[item], { state }, false, null, false, null, 50, true, true])
+      expect(html).not.toContain('shelf-spinner')
+      expect(html).toContain('Disconnect and delete data')
+    }
+  })
+
+  it('shows disconnect when the shelf falls back to the record list', () => {
+    const html = render([[item], { state: 'idle' }, false, null, false, null, 50, false])
+    expect(html).toContain('class="record-list"')
+    expect(html).not.toContain('shelf-spinner')
+    expect(html).toContain('Disconnect and delete data')
   })
 })
