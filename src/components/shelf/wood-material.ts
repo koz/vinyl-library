@@ -1,11 +1,12 @@
 import * as THREE from 'three'
-import { mix, texture, uniform } from 'three/tsl'
+import { materialReference, mix } from 'three/tsl'
 import type Node from 'three/src/nodes/core/Node.js'
 import { GetWoodPreset, WoodNodeMaterial } from 'three/examples/jsm/materials/WoodNodeMaterial.js'
 import type { OakMaps } from './textures'
 
 const WORLD_SCALE = 0.001
 const OAK_FINISH = { brightness: 1.4, warmth: 0.3, grainScale: 2.55, roughness: 0.7, relief: 0 }
+let oakColorNode: Node<'vec3'> | undefined
 
 /** Selected natural oak finish, with independent grain placement for each shelf. */
 export function createWoodMaterial(maps: OakMaps, nodes: boolean, offset: number) {
@@ -38,13 +39,14 @@ export function createWoodMaterial(maps: OakMaps, nodes: boolean, offset: number
   material.bumpScale = relief * (nodes ? 1 : 0.22 / 0.32) * WORLD_SCALE
   if (material instanceof WoodNodeMaterial) {
     const wood = material as WoodNodeMaterial & { colorNode: Node<'vec3'> }
-    wood.colorNode = mix(wood.colorNode, texture(color).rgb, 0.9).mul(uniform(tint))
-    // The addon extends a standard material, whose cache key omits custom node graphs.
-    // Separate bindings let every shelf use its own grain position.
+    // Share the graph, but resolve texture and tint from the material being drawn.
+    // Capturing a cloned texture here forces a shader build for every new plank.
+    oakColorNode ??= mix(wood.colorNode, (materialReference('map', 'texture') as unknown as Node<'vec4'>).rgb, 0.9)
+      .mul(materialReference('color', 'color') as unknown as Node<'vec3'>)
+    wood.colorNode = oakColorNode
     material.customProgramCacheKey = () => wood.colorNode.getCacheKey().toString()
-  } else {
-    material.color.copy(tint)
   }
+  material.color.copy(tint)
   const end = new THREE.MeshStandardMaterial({
     map: endMap, color: tint,
     roughness: Math.min(1, surfaceRoughness / 0.85 * 0.9), envMapIntensity: 0.3,

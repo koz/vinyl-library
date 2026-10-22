@@ -92,7 +92,12 @@ export class ShelfScene {
   private readonly backMaterial = new THREE.MeshStandardMaterial({ color: 0xd9d1c1, roughness: 0.95 })
   private readonly rimMaterial = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.35 })
   private readonly plankOffsets = new WeakMap<HTMLElement, number>()
-  private readonly plankMaterials = new Map<HTMLElement, ReturnType<typeof createWoodMaterial>>()
+  // Retain visited planks so hiding every row cannot evict the shared shader.
+  // The separate `planks` map contains only rows that need layout updates and drawing.
+  private readonly plankCache = new Map<HTMLElement, {
+    mesh: THREE.Mesh
+    wood: ReturnType<typeof createWoodMaterial>
+  }>()
   private readonly observer: IntersectionObserver
   private readonly resizeObserver: ResizeObserver
   private readonly tracked = new Map<HTMLElement, SleeveInfo | 'plank'>()
@@ -198,6 +203,7 @@ export class ShelfScene {
       this.observer.unobserve(element)
       this.tracked.delete(element)
       this.deactivate(element)
+      this.disposePlank(element)
     }
   }
 
@@ -273,6 +279,7 @@ export class ShelfScene {
     this.resizeObserver.disconnect()
     this.clearSelection()
     for (const element of [...this.sleeves.keys(), ...this.planks.keys()]) this.deactivate(element)
+    for (const element of this.plankCache.keys()) this.disposePlank(element)
     this.sleeveGeometry.dispose()
     this.discGeometry.dispose()
     for (const material of [
@@ -303,11 +310,16 @@ export class ShelfScene {
     if (!info) return
     if (info === 'plank') {
       if (this.planks.has(element)) return
-      const wood = createWoodMaterial(this.oak, this.woodNodes, this.plankOffsets.get(element)!)
-      const plank = new THREE.Mesh(new THREE.BoxGeometry(), wood.material)
-      this.plankMaterials.set(element, wood)
-      plank.castShadow = true
-      plank.receiveShadow = true
+      let cached = this.plankCache.get(element)
+      if (!cached) {
+        const wood = createWoodMaterial(this.oak, this.woodNodes, this.plankOffsets.get(element)!)
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(), wood.material)
+        mesh.castShadow = true
+        mesh.receiveShadow = true
+        cached = { mesh, wood }
+        this.plankCache.set(element, cached)
+      }
+      const plank = cached.mesh
       this.planks.set(element, plank)
       this.scene.add(plank)
       return
@@ -379,9 +391,6 @@ export class ShelfScene {
     const plank = this.planks.get(element)
     if (plank) {
       this.scene.remove(plank)
-      this.plankMaterials.get(element)?.dispose()
-      this.plankMaterials.delete(element)
-      plank.geometry.dispose()
       this.planks.delete(element)
     }
     const sleeve = this.sleeves.get(element)
@@ -391,6 +400,14 @@ export class ShelfScene {
     sleeve.front.dispose()
     this.scene.remove(sleeve.group)
     this.sleeves.delete(element)
+  }
+
+  private disposePlank(element: HTMLElement) {
+    const cached = this.plankCache.get(element)
+    if (!cached) return
+    cached.wood.dispose()
+    cached.mesh.geometry.dispose()
+    this.plankCache.delete(element)
   }
 
   private clearSelection() {
@@ -502,7 +519,7 @@ export class ShelfScene {
         plank.userData.width = rect.width
         plank.userData.height = rect.height
       }
-      this.plankMaterials.get(element)?.setDimensions(rect.width, rect.height, PLANK_DEPTH)
+      this.plankCache.get(element)?.wood.setDimensions(rect.width, rect.height, PLANK_DEPTH)
     }
 
     if (!this.selection) this.scrim.visible = false

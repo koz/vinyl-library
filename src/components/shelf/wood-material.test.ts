@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
+import type MaterialReferenceNode from 'three/src/nodes/accessors/MaterialReferenceNode.js'
+import type Node from 'three/src/nodes/core/Node.js'
+import { NodeFrame } from 'three/webgpu'
+import type TextureNode from 'three/src/nodes/accessors/TextureNode.js'
+import type { WoodNodeMaterial } from 'three/examples/jsm/materials/WoodNodeMaterial.js'
 import { createWoodMaterial } from './wood-material'
 
 function maps() {
@@ -22,11 +27,53 @@ describe('natural oak shelves', () => {
     }
   })
 
-  it('uses separate node cache keys so shelves cannot share grain bindings', () => {
-    const a = createWoodMaterial(maps(), true, 0.2)
-    const b = createWoodMaterial(maps(), true, 0.7)
-    expect((a.material as THREE.Material).customProgramCacheKey())
-      .not.toBe((b.material as THREE.Material).customProgramCacheKey())
+  it('reuses the oak shader across different shelves and shelves recreated after scrolling', () => {
+    const source = maps()
+    const a = createWoodMaterial(source, true, 0.2)
+    const key = (a.material as THREE.Material).customProgramCacheKey()
+    const b = createWoodMaterial(source, true, 0.7)
+    expect((b.material as THREE.Material).customProgramCacheKey()).toBe(key)
+    a.dispose()
+    const returned = createWoodMaterial(source, true, 0.2)
+    expect((returned.material as THREE.Material).customProgramCacheKey()).toBe(key)
+    b.dispose()
+    returned.dispose()
+  })
+
+  it('binds the shared shader to each shelf’s own grain texture and tint', () => {
+    const source = maps()
+    const a = createWoodMaterial(source, true, 0.2)
+    const b = createWoodMaterial(source, true, 0.7)
+    const timber = a.material as WoodNodeMaterial & { colorNode: Node }
+    const other = b.material as WoodNodeMaterial
+    const bindings = new Map<string, MaterialReferenceNode>()
+    timber.colorNode.traverse((node) => {
+      if ('isMaterialReferenceNode' in node && node.isMaterialReferenceNode) {
+        const binding = node as MaterialReferenceNode
+        bindings.set(binding.property, binding)
+      }
+    })
+    const map = bindings.get('map')!
+    const color = bindings.get('color')!
+    expect(map, 'grain texture must follow the currently rendered material').toBeDefined()
+    expect(color, 'tint must follow the currently rendered material').toBeDefined()
+    for (const material of [timber, other, timber]) {
+      const frame = new NodeFrame()
+      frame.material = material
+      map.updateReference(frame)
+      map.update(frame)
+      color.updateReference(frame)
+      color.update(frame)
+      expect((map.node as TextureNode).value).toBe(material.map)
+      expect((color.node as unknown as { value: THREE.Color }).value).toBe(material.color)
+    }
+    expect(timber.map!.offset.x).toBe(0.2)
+    expect(other.map!.offset.x).toBe(0.7)
+    expect(timber.color.r).toBeCloseTo(1.4 * (1 + 0.3 * 0.14))
+    a.setDimensions(900, 16, 56)
+    b.setDimensions(1200, 16, 56)
+    // Texture placement and the procedural grain transform remain independent.
+    expect(timber.transformationMatrix.equals(other.transformationMatrix)).toBe(false)
     a.dispose()
     b.dispose()
   })
