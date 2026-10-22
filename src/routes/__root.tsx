@@ -9,7 +9,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { name: 'theme-color', content: '#f5f2ec' },
+      { name: 'theme-color', content: '#E0E0E0' },
       { title: 'Vinyl Library' },
     ],
     links: [{ rel: 'stylesheet', href: appCss }],

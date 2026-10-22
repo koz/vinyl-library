@@ -31,7 +31,6 @@ const TRAVEL_SECONDS = 0.75
 const SHELF_CLEARANCE_FRACTION = 0.3
 const SLIDE_SECONDS = 0.9
 const SCRIM_OPACITY = 0.94
-const BACKGROUND = 0xf5f2ec
 // The wood shader's distance filtering is designed for metre-scale scenes.
 const WORLD_SCALE = 0.001
 
@@ -164,7 +163,7 @@ export class ShelfScene {
     this.scrim = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1),
       new THREE.MeshBasicMaterial({
-        color: BACKGROUND,
+        color: getComputedStyle(canvas).getPropertyValue('--bg').trim(),
         transparent: true,
         opacity: 0,
         depthWrite: false,
