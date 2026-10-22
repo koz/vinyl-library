@@ -5,9 +5,8 @@ import { LoadingRecords } from './LoadingRecords'
 
 const PAGE_SIZE = 50
 
-export function CollectionView({ items, shared = false, emptyMessage, footer }: {
+export function CollectionView({ items, emptyMessage, footer }: {
   items: CollectionItem[] | null
-  shared?: boolean
   emptyMessage: string
   footer?: ReactNode
 }) {
@@ -44,7 +43,6 @@ export function CollectionView({ items, shared = false, emptyMessage, footer }: 
       ) : shelfSupported ? (
         <VinylShelf
           items={items.slice(0, visible)}
-          shared={shared}
           onUnsupported={() => setShelfSupported(false)}
           onReady={() => setShelfReady(true)}
         />

@@ -46,7 +46,8 @@ export const signOut = createServerFn({ method: 'POST' }).handler(async () => {
   destroySession()
 })
 
-// Proof of concept: only search the selected record, never the whole collection.
+// Public so shared collections can resolve albums without a Discogs session.
+// Search caching and the upstream rate budget live in spotify.server.
 export const matchSpotifyAlbum = createServerFn({ method: 'GET' })
   .validator(z.object({
     artist: z.string().trim().min(1).max(500),
@@ -55,6 +56,5 @@ export const matchSpotifyAlbum = createServerFn({ method: 'GET' })
     year: z.number().int().nullable(),
   }))
   .handler(async ({ data }) => {
-    if (!getSession()) throw redirect({ to: '/' })
     return searchSpotifyAlbums(data)
   })

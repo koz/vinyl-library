@@ -42,7 +42,7 @@ function SharedCollectionPage() {
         <Link className="button" to="/"><ButtonLabel>Your collection</ButtonLabel></Link>
       </header>
       <main>
-        <CollectionView key={data} items={items} shared emptyMessage="There’s no vinyl in this shared collection." />
+        <CollectionView key={data} items={items} emptyMessage="There’s no vinyl in this shared collection." />
       </main>
     </div>
   )

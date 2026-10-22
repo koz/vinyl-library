@@ -77,7 +77,9 @@ Open [localhost:3000](http://localhost:3000), choose **Connect Discogs**, and ap
 
 Spotify playback is experimental. Create an app in the [Spotify developer dashboard](https://developer.spotify.com/dashboard), add its `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` to `.env`, and restart the server. `SPOTIFY_MARKET` defaults to `NL`; change it to your two-letter country code if needed.
 
-Opening a record looks for a confident artist-and-title match. The player appears when ready, and matches are remembered in that browser. Closing the record stops playback. Shared shelves don’t include Spotify.
+Opening a record looks for a confident artist-and-title match. The player appears when ready, and matches are remembered in that browser. Closing the record stops playback. Spotify also works on shared shelves without signing in to Discogs.
+
+The server caches matches for an hour and empty searches for five minutes, combines simultaneous lookups, and limits Spotify searches to 30 requests per rolling minute per server process. Cached results remain available at the limit, and Spotify’s retry window is respected when it limits requests.
 
 > [!NOTE]
 > Spotify access and catalog availability can limit matching. Spotify determines whether you hear full tracks or previews; your browser may require pressing play. No Spotify authorization through Vinyl Library is needed.

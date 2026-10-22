@@ -24,12 +24,10 @@ export function VinylShelf({
   items,
   onUnsupported,
   onReady,
-  shared = false,
 }: {
   items: CollectionItem[]
   onUnsupported: () => void
   onReady: () => void
-  shared?: boolean
 }) {
   const shelfRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -159,7 +157,6 @@ export function VinylShelf({
           stage={stage}
           scene={scene}
           onClose={closeStage}
-          shared={shared}
         />
       )}
     </>
@@ -230,12 +227,10 @@ function StageView({
   stage,
   scene,
   onClose,
-  shared,
 }: {
   stage: Stage
   scene: ShelfScene | null
   onClose: () => void
-  shared: boolean
 }) {
   const artRef = useRef<HTMLButtonElement>(null)
   const { item } = stage
@@ -288,7 +283,7 @@ function StageView({
             <ButtonLabel>View on Discogs</ButtonLabel>
           </a>
         </div>
-        {!shared && <SpotifyAlbumPrototype key={item.releaseId} item={item} active={!stage.closing} />}
+        <SpotifyAlbumPrototype key={item.releaseId} item={item} active={!stage.closing} />
       </section>
     </div>
   )
