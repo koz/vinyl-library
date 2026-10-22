@@ -33,7 +33,6 @@ function CollectionPage() {
 
   // null until the saved copy (if any) has been read from this browser.
   const [items, setItems] = useState<ImportedItem[] | null>(null)
-  const [cacheChecked, setCacheChecked] = useState(false)
   const [status, setStatus] = useState<ImportStatus>({ state: 'idle' })
   const [needsReauth, setNeedsReauth] = useState(false)
   const importRun = useRef(0)
@@ -78,7 +77,6 @@ function CollectionPage() {
     loadCollection(viewer.id).then((cached) => {
       if (!active) return
       if (cached) setItems((current) => current ?? cached.items)
-      setCacheChecked(true)
     })
     void runImport()
     return () => {
@@ -102,6 +100,7 @@ function CollectionPage() {
   }
 
   const importing = status.state === 'importing'
+  const firstImportFailed = items === null && status.state === 'failed'
 
   return (
     <div className="page">
@@ -147,16 +146,16 @@ function CollectionPage() {
           </div>
         )}
 
-        {items ? (
+        {firstImportFailed ? (
+          !needsReauth && <FirstImportError status={status} onRetry={runImport} />
+        ) : (
           <>
-            <UpdateNotice status={status} needsReauth={needsReauth} onRetry={runImport} />
+            {items && <UpdateNotice status={status} needsReauth={needsReauth} onRetry={runImport} />}
             <CollectionView
               items={items}
               emptyMessage="There’s no vinyl in your Discogs collection yet."
             />
           </>
-        ) : (
-          cacheChecked && !needsReauth && <FirstImport status={status} onRetry={runImport} />
         )}
       </main>
 
@@ -177,33 +176,13 @@ function progressLabel(status: Extract<ImportStatus, { state: 'importing' }>): s
   return `Read ${status.pagesDone} of ${status.pagesTotal} ${status.pagesTotal === 1 ? 'page' : 'pages'}`
 }
 
-function FirstImport({ status, onRetry }: { status: ImportStatus; onRetry: () => void }) {
-  if (status.state === 'failed') {
-    return (
-      <div className="panel" role="alert">
-        <p>{importErrorMessage(status)}</p>
-        <button className="button" type="button" onClick={onRetry}>
-          <ButtonLabel>Try again</ButtonLabel>
-        </button>
-      </div>
-    )
-  }
-
-  const pagesDone = status.state === 'importing' ? status.pagesDone : 0
-  const pagesTotal = status.state === 'importing' ? status.pagesTotal : null
-
+function FirstImportError({ status, onRetry }: { status: ImportStatus; onRetry: () => void }) {
   return (
-    <div className="panel" role="status" aria-live="polite">
-      <p>Importing your collection from Discogs</p>
-      <p className="muted">
-        {status.state === 'importing' ? progressLabel(status) : 'Starting…'}
-      </p>
-      <div className="progress">
-        <div
-          className="progress-bar"
-          style={{ width: pagesTotal ? `${(pagesDone / pagesTotal) * 100}%` : '0%' }}
-        />
-      </div>
+    <div className="panel" role="alert">
+      <p>{importErrorMessage(status)}</p>
+      <button className="button" type="button" onClick={onRetry}>
+        <ButtonLabel>Try again</ButtonLabel>
+      </button>
     </div>
   )
 }

@@ -206,19 +206,6 @@ a {
   margin-top: 4px;
 }
 
-.progress {
-  height: 4px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: var(--border);
-}
-
-.progress-bar {
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.3s ease;
-}
-
 /* Sign in */
 
 .sign-in {
@@ -430,7 +417,11 @@ a {
 }
 
 .shelf-spinner {
+  width: 28px;
+  height: 28px;
   color: var(--accent);
+  /* Animate an HTML layer so rotation continues while the 3D scene blocks the main thread. */
+  will-change: transform;
   animation: shelf-spin 800ms linear infinite;
 }
 
@@ -441,6 +432,7 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .shelf-spinner {
     animation: none;
+    will-change: auto;
   }
 }
 

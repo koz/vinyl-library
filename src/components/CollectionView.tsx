@@ -1,21 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CollectionItem } from '../lib/collection'
 import { VinylShelf } from './shelf/VinylShelf'
+import { LoadingRecords } from './LoadingRecords'
 
 const PAGE_SIZE = 50
 
 export function CollectionView({ items, shared = false, emptyMessage }: {
-  items: CollectionItem[]
+  items: CollectionItem[] | null
   shared?: boolean
   emptyMessage: string
 }) {
   const [visible, setVisible] = useState(PAGE_SIZE)
   const [shelfSupported, setShelfSupported] = useState(true)
+  const [shelfReady, setShelfReady] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const sentinel = loadMoreRef.current
-    if (!sentinel || visible >= items.length) return
+    if (!sentinel || !items || visible >= items.length) return
 
     let active = true
     const observer = new IntersectionObserver((entries) => {
@@ -29,22 +31,26 @@ export function CollectionView({ items, shared = false, emptyMessage }: {
       active = false
       observer.disconnect()
     }
-  }, [visible, items.length])
+  }, [visible, items?.length])
+
+  const loading = items === null || (items.length > 0 && shelfSupported && !shelfReady)
 
   return (
     <>
-      {items.length === 0 ? (
+      {loading && <LoadingRecords />}
+      {items === null ? null : items.length === 0 ? (
         <p className="empty">{emptyMessage}</p>
       ) : shelfSupported ? (
         <VinylShelf
           items={items.slice(0, visible)}
           shared={shared}
           onUnsupported={() => setShelfSupported(false)}
+          onReady={() => setShelfReady(true)}
         />
       ) : (
         <RecordList items={items.slice(0, visible)} />
       )}
-      {visible < items.length && (
+      {items && visible < items.length && (
         <div ref={loadMoreRef} className="scroll-sentinel" aria-hidden="true" />
       )}
     </>

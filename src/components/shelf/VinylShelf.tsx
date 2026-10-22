@@ -8,7 +8,6 @@ import {
   type FocusEvent,
   type PointerEvent,
 } from 'react'
-import { LoaderCircle } from 'lucide-react'
 import type { CollectionItem } from '../../lib/collection'
 import { ButtonLabel } from '../ButtonLabel'
 import { SpotifyAlbumPrototype } from '../SpotifyAlbumPrototype'
@@ -24,10 +23,12 @@ type Stage = { item: CollectionItem; closing: boolean }
 export function VinylShelf({
   items,
   onUnsupported,
+  onReady,
   shared = false,
 }: {
   items: CollectionItem[]
   onUnsupported: () => void
+  onReady: () => void
   shared?: boolean
 }) {
   const shelfRef = useRef<HTMLDivElement>(null)
@@ -37,8 +38,8 @@ export function VinylShelf({
   const [columns, setColumns] = useState(4)
   const [stage, setStage] = useState<Stage | null>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
-  const unsupported = useRef(onUnsupported)
-  unsupported.current = onUnsupported
+  const callbacks = useRef({ onUnsupported, onReady })
+  callbacks.current = { onUnsupported, onReady }
   // Read by the Escape listener and the close animation callback, which outlive a render.
   const latest = useRef({ stage, scene })
   latest.current = { stage, scene }
@@ -52,7 +53,10 @@ export function VinylShelf({
         if (cancelled || !canvasRef.current) return
         try {
           instance = await ShelfScene.create(canvasRef.current, () => {
-            if (!cancelled) setReady(true)
+            if (!cancelled) {
+              setReady(true)
+              callbacks.current.onReady()
+            }
           })
           if (cancelled) {
             instance.dispose()
@@ -61,14 +65,14 @@ export function VinylShelf({
         } catch (error) {
           if (!cancelled) {
             console.error('Could not start the 3D shelf', error)
-            unsupported.current()
+            callbacks.current.onUnsupported()
           }
           return
         }
         setScene(instance)
       },
       () => {
-        if (!cancelled) unsupported.current()
+        if (!cancelled) callbacks.current.onUnsupported()
       },
     )
     return () => {
@@ -128,12 +132,6 @@ export function VinylShelf({
 
   return (
     <>
-      {!ready && (
-        <div className="shelf-loading" role="status">
-          <LoaderCircle className="shelf-spinner" size={28} strokeWidth={1.5} aria-hidden="true" />
-          <span>Loading records…</span>
-        </div>
-      )}
       <canvas ref={canvasRef} className={`shelf-canvas${ready ? '' : ' shelf-canvas-loading'}`} aria-hidden="true" />
       <div
         ref={shelfRef}
