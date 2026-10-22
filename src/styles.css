@@ -118,15 +118,29 @@ a {
   text-decoration: none;
 }
 
-.button-refresh svg {
+.button-refresh {
+  width: 40px;
+  min-height: 40px;
+}
+
+.refresh-vinyl-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  background: currentColor;
+  /* A 4x render of refresh-vinyl.svg retains smooth edge coverage on 1x displays. */
+  mask: url('./assets/refresh-vinyl-4x.png') center / contain no-repeat;
+}
+
+.button-refresh .refresh-vinyl-icon {
   transition: transform 250ms ease;
 }
 
-.button-refresh:is(:hover, :focus-visible):not(:disabled) svg {
+.button-refresh:is(:hover, :focus-visible):not(:disabled) .refresh-vinyl-icon {
   transform: rotate(90deg);
 }
 
-.button-refresh[aria-busy="true"] svg {
+.button-refresh[aria-busy="true"] .refresh-vinyl-icon {
   animation: refresh-spin 800ms linear infinite;
 }
 
@@ -175,11 +189,11 @@ a {
   .link-button,
   .inline-link,
   .button-underline,
-  .button-refresh svg {
+  .button-refresh .refresh-vinyl-icon {
     transition: none;
   }
 
-  .button-refresh[aria-busy="true"] svg {
+  .button-refresh[aria-busy="true"] .refresh-vinyl-icon {
     animation: none;
   }
 }
