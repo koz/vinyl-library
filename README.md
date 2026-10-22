@@ -87,7 +87,7 @@ Opening a record looks for a confident artist-and-title match. The player appear
 Your collection and Spotify matches are saved in your browser. Sign-in credentials stay in an encrypted cookie inaccessible to browser JavaScript. No database is needed, and no collection or account credentials are saved in server-side storage.
 
 - **Logout** ends your session and keeps saved browser data.
-- **Disconnect and delete app data** also removes saved collections and Spotify matches from that browser. Discogs and other devices are unaffected.
+- **Disconnect and delete data** also removes saved collections and Spotify matches from that browser. Discogs and other devices are unaffected.
 - To revoke the app’s access across devices, use your [Discogs application settings](https://www.discogs.com/settings/applications).
 
 > [!IMPORTANT]

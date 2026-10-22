@@ -159,7 +159,7 @@ function CollectionPage() {
         )}
       </main>
 
-      <DisconnectSection onConfirm={handleDisconnect} />
+      <DisconnectSection onDisconnect={handleDisconnect} />
     </div>
   )
 }
@@ -209,16 +209,15 @@ function UpdateNotice({
   return null
 }
 
-function DisconnectSection({ onConfirm }: { onConfirm: () => Promise<void> }) {
-  const [confirming, setConfirming] = useState(false)
+function DisconnectSection({ onDisconnect }: { onDisconnect: () => Promise<void> }) {
   const [working, setWorking] = useState(false)
   const [failed, setFailed] = useState(false)
 
-  async function confirm() {
+  async function disconnect() {
     setWorking(true)
     setFailed(false)
     try {
-      await onConfirm()
+      await onDisconnect()
     } catch {
       setFailed(true)
       setWorking(false)
@@ -227,32 +226,10 @@ function DisconnectSection({ onConfirm }: { onConfirm: () => Promise<void> }) {
 
   return (
     <footer className="page-footer">
-      {confirming ? (
-        <div className="panel">
-          <p>Disconnect Discogs and delete the collection saved in this browser?</p>
-          <p className="muted">
-            Nothing is stored on our server, and your Discogs collection won’t change. To revoke
-            this app’s access on every device, visit{' '}
-            <a href="https://www.discogs.com/settings/applications" target="_blank" rel="noreferrer">
-              Discogs application settings
-            </a>
-            .
-          </p>
-          {failed && <p className="notice notice-error">Couldn’t disconnect. Please try again.</p>}
-          <div className="actions">
-            <button className="button" type="button" onClick={() => setConfirming(false)} disabled={working}>
-              <ButtonLabel>Cancel</ButtonLabel>
-            </button>
-            <button className="button button-danger" type="button" onClick={confirm} disabled={working}>
-              <ButtonLabel>{working ? 'Disconnecting…' : 'Disconnect and delete data'}</ButtonLabel>
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button className="link-button" type="button" onClick={() => setConfirming(true)}>
-          <ButtonLabel>Disconnect and delete app data</ButtonLabel>
-        </button>
-      )}
+      {failed && <p className="notice notice-error">Couldn’t disconnect. Please try again.</p>}
+      <button className="link-button" type="button" onClick={disconnect} disabled={working}>
+        <ButtonLabel>{working ? 'Disconnecting…' : 'Disconnect and delete data'}</ButtonLabel>
+      </button>
     </footer>
   )
 }
