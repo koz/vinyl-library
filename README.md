@@ -33,7 +33,7 @@ Keyboard navigation is supported. Browsers without 3D graphics support show a si
 
 ## Get started
 
-You’ll need **Node.js 22.12 or later**, **npm**, and a **Discogs account** with records in its collection.
+You’ll need **Node.js 24**, **npm**, and a **Discogs account** with records in its collection.
 
 ### 1. Register a Discogs application
 
