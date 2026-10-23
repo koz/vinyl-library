@@ -15,13 +15,28 @@ function maps() {
 }
 
 describe('natural oak shelves', () => {
+  it('shares the uploaded oak maps across planks instead of uploading another copy per row', () => {
+    for (const nodes of [true, false]) {
+      const source = maps()
+      const a = createWoodMaterial(source, nodes, 0.2)
+      const b = createWoodMaterial(source, nodes, 0.7)
+      for (const wood of [a, b]) {
+        const timber = (Array.isArray(wood.material) ? wood.material[2]! : wood.material) as THREE.MeshStandardMaterial
+        expect(timber.map).toBe(source.color)
+        expect(timber.bumpMap).toBe(source.bump)
+        expect(timber.roughnessMap).toBe(source.roughness)
+      }
+      a.dispose()
+      b.dispose()
+    }
+  })
   it('uses the selected finish without surface relief on both backends', () => {
     for (const nodes of [true, false]) {
       const wood = createWoodMaterial(maps(), nodes, 0.4)
       const material = (Array.isArray(wood.material) ? wood.material[2]! : wood.material) as THREE.MeshStandardMaterial
       expect(material.bumpScale).toBe(0)
-      expect(material.map!.repeat.x).toBe(2.55)
-      expect(material.map!.offset.x).toBe(0.4)
+      expect(wood.grain.scale).toBe(2.55)
+      expect(wood.grain.offset).toBe(0.4)
       expect(material.roughness).toBeCloseTo(nodes ? 0.7 : 0.7 / 0.85)
       wood.dispose()
     }
@@ -67,8 +82,8 @@ describe('natural oak shelves', () => {
       expect((map.node as TextureNode).value).toBe(material.map)
       expect((color.node as unknown as { value: THREE.Color }).value).toBe(material.color)
     }
-    expect(timber.map!.offset.x).toBe(0.2)
-    expect(other.map!.offset.x).toBe(0.7)
+    expect(a.grain.offset).toBe(0.2)
+    expect(b.grain.offset).toBe(0.7)
     expect(timber.color.r).toBeCloseTo(1.4 * (1 + 0.3 * 0.14))
     a.setDimensions(900, 16, 56)
     b.setDimensions(1200, 16, 56)
@@ -78,22 +93,22 @@ describe('natural oak shelves', () => {
     b.dispose()
   })
 
-  it('isolates fallback grain placement and disposal from shared source maps', () => {
+  it('isolates grain placement and material disposal while retaining shared source maps', () => {
     const source = maps()
     const a = createWoodMaterial(source, false, 0.2)
     const b = createWoodMaterial(source, false, 0.7)
     const timber = (a.material as THREE.MeshStandardMaterial[])[2]!
     const other = (b.material as THREE.MeshStandardMaterial[])[2]!
     expect(timber.color.r).toBeCloseTo(1.4 * (1 + 0.3 * 0.14))
-    expect(timber.map!.offset.x).toBe(0.2)
-    expect(other.map!.offset.x).toBe(0.7)
+    expect(a.grain.offset).toBe(0.2)
+    expect(b.grain.offset).toBe(0.7)
     expect(source.color.offset.x).toBe(0)
     expect(source.color.repeat.x).toBe(1)
     let disposed = false
     source.color.addEventListener('dispose', () => { disposed = true })
     a.dispose()
     expect(disposed).toBe(false)
-    expect(other.map).not.toBe(timber.map)
+    expect(other.map).toBe(timber.map)
     b.dispose()
   })
 })

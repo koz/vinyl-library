@@ -1,7 +1,22 @@
 import { expect, it } from 'vitest'
 import * as THREE from 'three'
-import { createSleeveGeometry, setPlankGrainUVs } from './geometry'
+import { createPlankGeometry, createSleeveGeometry, setPlankGrainUVs } from './geometry'
 import { RECORD_RADIUS } from './layout'
+
+it('preserves each shelf’s grain placement in UVs while sharing the underlying textures', () => {
+  const base = createPlankGeometry(900, 16, 56)
+  const uvs = base.getAttribute('uv')
+  for (const offset of [0.2, 0.7]) {
+    const placed = createPlankGeometry(900, 16, 56, { scale: 2.55, offset })
+    const grain = placed.getAttribute('uv')
+    for (let i = 0; i < uvs.count; i++) {
+      expect(grain.getX(i)).toBeCloseTo(uvs.getX(i) * 2.55 + offset, 6)
+      expect(grain.getY(i)).toBeCloseTo(uvs.getY(i) * 2.55 + offset * 0.85, 6)
+    }
+    placed.dispose()
+  }
+  base.dispose()
+})
 
 it('keeps the wood fibers at the same physical scale across plank faces and after resizing', () => {
   const geometry = new THREE.BoxGeometry()

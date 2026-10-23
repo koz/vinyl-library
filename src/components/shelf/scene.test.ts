@@ -51,7 +51,8 @@ function animation() {
   const frame = (pose = { x: -300, y: 0, z: 0, size: 180, rx: -0.06, ry: 0 }) => scene.updateSelection(
     selection,
     pose,
-    1 / 60,
+    // Sample the path finely, stopping the closing checks before its disposal frame.
+    1 / 144,
   )
   Object.assign(scene, {
     selection,
@@ -68,7 +69,7 @@ describe('hover tilt when pulling a sleeve forward', () => {
       const { scene, selection } = animation()
       selection.sleeve.tilt = tilt
       const angle = -0.06 + tilt * 0.16
-      for (let i = 0; i < 13; i++) {
+      for (let i = 0; i < 5; i++) {
         scene.update(1 / 60)
         expect(selection.sleeve.group.rotation.x).toBeCloseTo(angle, 10)
       }

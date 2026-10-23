@@ -1,7 +1,10 @@
 import * as THREE from 'three'
 
 /** Rounded timber corners with a smaller, soft edge around the top and bottom. */
-export function createPlankGeometry(width: number, height: number, depth: number): THREE.BoxGeometry {
+export function createPlankGeometry(
+  width: number, height: number, depth: number,
+  grain?: { scale: number; offset: number },
+): THREE.BoxGeometry {
   const geometry = new THREE.BoxGeometry(1, 1, 1, 17, 9, 17)
   const positions = geometry.getAttribute('position')
   const smoothNormals = new Float32Array(positions.count * 3)
@@ -34,6 +37,12 @@ export function createPlankGeometry(width: number, height: number, depth: number
 
   // Use the original box face directions to keep the grain aligned across the curves.
   setPlankGrainUVs(geometry, width, height, depth)
+  if (grain) {
+    const uvs = geometry.getAttribute('uv')
+    for (let i = 0; i < uvs.count; i++) {
+      uvs.setXY(i, uvs.getX(i) * grain.scale + grain.offset, uvs.getY(i) * grain.scale + grain.offset * 0.85)
+    }
+  }
   geometry.setAttribute('normal', new THREE.BufferAttribute(smoothNormals, 3))
   geometry.computeBoundingBox()
   geometry.computeBoundingSphere()

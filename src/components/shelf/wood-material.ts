@@ -10,10 +10,7 @@ let oakColorNode: Node<'vec3'> | undefined
 
 /** Selected natural oak finish, with independent grain placement for each shelf. */
 export function createWoodMaterial(maps: OakMaps, nodes: boolean, offset: number) {
-  const color = maps.color.clone()
-  const bump = maps.bump.clone()
-  const roughness = maps.roughness.clone()
-  const endMap = maps.endGrain.clone()
+  const { color, bump, roughness, endGrain: endMap } = maps
   const { brightness, warmth, grainScale, roughness: surfaceRoughness, relief } = OAK_FINISH
   const tint = new THREE.Color().setRGB(
     brightness * (1 + warmth * 0.14),
@@ -40,7 +37,6 @@ export function createWoodMaterial(maps: OakMaps, nodes: boolean, offset: number
   if (material instanceof WoodNodeMaterial) {
     const wood = material as WoodNodeMaterial & { colorNode: Node<'vec3'> }
     // Share the graph, but resolve texture and tint from the material being drawn.
-    // Capturing a cloned texture here forces a shader build for every new plank.
     oakColorNode ??= mix(wood.colorNode, (materialReference('map', 'texture') as unknown as Node<'vec4'>).rgb, 0.9)
       .mul(materialReference('color', 'color') as unknown as Node<'vec3'>)
     wood.colorNode = oakColorNode
@@ -51,13 +47,10 @@ export function createWoodMaterial(maps: OakMaps, nodes: boolean, offset: number
     map: endMap, color: tint,
     roughness: Math.min(1, surfaceRoughness / 0.85 * 0.9), envMapIntensity: 0.3,
   })
-  for (const map of [color, bump, roughness, endMap]) {
-    map.repeat.setScalar(grainScale)
-    map.offset.set(offset, offset * 0.85)
-  }
-
   return {
     material: nodes ? material : [end, end, material, material, material, material],
+    // Per-plank UVs preserve independent placement without duplicating GPU textures.
+    grain: { scale: grainScale, offset },
     setDimensions(width: number, height: number, depth: number) {
       if (!(material instanceof WoodNodeMaterial)) return
       material.transformationMatrix.set(
@@ -68,7 +61,6 @@ export function createWoodMaterial(maps: OakMaps, nodes: boolean, offset: number
       )
     },
     dispose() {
-      for (const map of [color, bump, roughness, endMap]) map.dispose()
       material.dispose()
       end.dispose()
     },

@@ -1,0 +1,1178 @@
+{
+  "baselineCommit": "f4d6a6b",
+  "comparison": "Committed implementation versus current uncommitted performance changes",
+  "collectionRecords": 52,
+  "method": "Production builds; one test tab; two 4-second 0\u20132400\u20130 CSS-pixel scroll loops; two record open/close cycles. Desktop 1440x900 DPR 2; iOS Simulator iPhone 17 / Safari iOS 26.5, 402x714 DPR 3 (canvas capped at DPR 2).",
+  "limitations": [
+    "Lab measurements, not physical iPhone measurements.",
+    "Scripted scrolling does not establish native touch/trackpad input latency.",
+    "Desktop idle requestAnimationFrame cadence varied between 8.3 and 33.3 ms, so these data do not establish desktop FPS gains or a consistent desktop regression.",
+    "Renderer memory is an allocation estimate, not measured process memory.",
+    "Some cover fetches hit browser HTTP cache; resource count is not network transfer count."
+  ],
+  "scenarios": {
+    "before-desktop": {
+      "flags": {},
+      "readyAtMs": 1018.9,
+      "canvas": [
+        2880,
+        1800
+      ],
+      "proceduralWood": true,
+      "phases": {
+        "idle": {
+          "frames": 30,
+          "mean": 33.300000000000004,
+          "p95": 34.200000000000045,
+          "max": 34.299999999999955,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 121,
+          "mean": 33.33471074380165,
+          "p95": 34.20000000000027,
+          "max": 34.30000000000018,
+          "over50": 0,
+          "over100": 0,
+          "renders": 119,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "scroll1": {
+          "frames": 120,
+          "mean": 33.34000000000001,
+          "p95": 34.30000000000018,
+          "max": 34.30000000000109,
+          "over50": 0,
+          "over100": 0,
+          "renders": 120,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "open0": {
+          "frames": 79,
+          "mean": 37.973417721518985,
+          "p95": 34.29999999999927,
+          "max": 400,
+          "over50": 1,
+          "over100": 1,
+          "renders": 79,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close0": {
+          "frames": 54,
+          "mean": 33.333333333333336,
+          "p95": 34.20000000000073,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "open1": {
+          "frames": 90,
+          "mean": 33.333333333333314,
+          "p95": 34.100000000000364,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 90,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close1": {
+          "frames": 54,
+          "mean": 33.335185185185225,
+          "p95": 34.29999999999927,
+          "max": 34.400000000001455,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "idleEnd": {
+          "frames": 24,
+          "mean": 33.291666666666664,
+          "p95": 34.29999999999927,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 6,
+          "drawCalls": 228,
+          "triangles": 208123
+        }
+      },
+      "rendererMemoryMiB": {
+        "start": 255.66,
+        "scroll0": 453.53,
+        "scroll1": 453.55,
+        "open0": 470.65,
+        "open1": 470.65,
+        "end": 465.28
+      },
+      "resources": {
+        "requests": 122,
+        "covers": 108,
+        "bytes": 6066717
+      },
+      "firstOpenSetupMs": 450.09999999403954
+    },
+    "current-desktop": {
+      "flags": {},
+      "readyAtMs": 1279.5,
+      "canvas": [
+        2880,
+        1800
+      ],
+      "proceduralWood": true,
+      "phases": {
+        "idle": {
+          "frames": 120,
+          "mean": 8.32916666666667,
+          "p95": 9.299999999999955,
+          "max": 9.300000000000182,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 448,
+          "mean": 8.947098214285715,
+          "p95": 9.300000000000182,
+          "max": 33.899999999999636,
+          "over50": 0,
+          "over100": 0,
+          "renders": 446,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "scroll1": {
+          "frames": 121,
+          "mean": 33.339669421487606,
+          "p95": 34.20000000000073,
+          "max": 34.399999999999636,
+          "over50": 0,
+          "over100": 0,
+          "renders": 121,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "open0": {
+          "frames": 90,
+          "mean": 33.327777777777776,
+          "p95": 34.20000000000073,
+          "max": 34.30000000000109,
+          "over50": 0,
+          "over100": 0,
+          "renders": 90,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close0": {
+          "frames": 54,
+          "mean": 33.342592592592595,
+          "p95": 34.19999999999891,
+          "max": 34.20000000000073,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "open1": {
+          "frames": 90,
+          "mean": 33.32333333333336,
+          "p95": 34.20000000000073,
+          "max": 34.30000000000291,
+          "over50": 0,
+          "over100": 0,
+          "renders": 90,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close1": {
+          "frames": 54,
+          "mean": 33.348148148148134,
+          "p95": 34.29999999999927,
+          "max": 34.30000000000291,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "idleEnd": {
+          "frames": 24,
+          "mean": 33.291666666666664,
+          "p95": 33.80000000000291,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 6,
+          "drawCalls": 228,
+          "triangles": 208123
+        }
+      },
+      "rendererMemoryMiB": {
+        "start": 191.67,
+        "scroll0": 256.24,
+        "scroll1": 256.27,
+        "open0": 273.37,
+        "open1": 273.37,
+        "end": 268.0
+      },
+      "resources": {
+        "requests": 123,
+        "covers": 108,
+        "bytes": 6077012
+      },
+      "firstOpenSetupMs": 0.6000000089406967
+    },
+    "no-shadows-desktop": {
+      "flags": {
+        "noShadows": true
+      },
+      "readyAtMs": 1173.8,
+      "canvas": [
+        2880,
+        1800
+      ],
+      "proceduralWood": true,
+      "phases": {
+        "idle": {
+          "frames": 22,
+          "mean": 48.095454545454544,
+          "p95": 34.200000000000045,
+          "max": 358.4,
+          "over50": 1,
+          "over100": 1,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 121,
+          "mean": 33.33553719008265,
+          "p95": 34.20000000000073,
+          "max": 34.399999999999636,
+          "over50": 0,
+          "over100": 0,
+          "renders": 119,
+          "drawCalls": 130,
+          "triangles": 121443
+        },
+        "scroll1": {
+          "frames": 121,
+          "mean": 33.333057851239666,
+          "p95": 34.20000000000073,
+          "max": 34.399999999999636,
+          "over50": 0,
+          "over100": 0,
+          "renders": 121,
+          "drawCalls": 130,
+          "triangles": 121443
+        },
+        "open0": {
+          "frames": 90,
+          "mean": 33.33222222222222,
+          "p95": 34.20000000000073,
+          "max": 34.30000000000109,
+          "over50": 0,
+          "over100": 0,
+          "renders": 90,
+          "drawCalls": 83,
+          "triangles": 73985
+        },
+        "close0": {
+          "frames": 54,
+          "mean": 33.33518518518519,
+          "p95": 34.29999999999927,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 83,
+          "triangles": 73985
+        },
+        "open1": {
+          "frames": 90,
+          "mean": 33.33333333333336,
+          "p95": 34.20000000000073,
+          "max": 34.30000000000291,
+          "over50": 0,
+          "over100": 0,
+          "renders": 90,
+          "drawCalls": 83,
+          "triangles": 73985
+        },
+        "close1": {
+          "frames": 54,
+          "mean": 33.33148148148144,
+          "p95": 34.20000000000073,
+          "max": 34.39999999999782,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 83,
+          "triangles": 73985
+        },
+        "idleEnd": {
+          "frames": 24,
+          "mean": 33.33750000000009,
+          "p95": 34.29999999999927,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 6,
+          "drawCalls": 79,
+          "triangles": 73343
+        }
+      },
+      "rendererMemoryMiB": {
+        "start": 159.65,
+        "scroll0": 224.22,
+        "scroll1": 224.24,
+        "open0": 241.31,
+        "open1": 241.31,
+        "end": 235.94
+      },
+      "resources": {
+        "requests": 120,
+        "covers": 108,
+        "bytes": 1857
+      },
+      "firstOpenSetupMs": 0.7000000029802322
+    },
+    "dpr1-desktop": {
+      "flags": {
+        "dpr": 1
+      },
+      "readyAtMs": 808.7,
+      "canvas": [
+        1440,
+        900
+      ],
+      "proceduralWood": true,
+      "phases": {
+        "idle": {
+          "frames": 30,
+          "mean": 33.336666666666666,
+          "p95": 34.19999999999982,
+          "max": 34.399999999999864,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 121,
+          "mean": 33.33223140495868,
+          "p95": 34.20000000000027,
+          "max": 34.40000000000009,
+          "over50": 0,
+          "over100": 0,
+          "renders": 119,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "scroll1": {
+          "frames": 121,
+          "mean": 33.32561983471074,
+          "p95": 34.20000000000073,
+          "max": 34.400000000000546,
+          "over50": 0,
+          "over100": 0,
+          "renders": 121,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "open0": {
+          "frames": 91,
+          "mean": 33.33296703296703,
+          "p95": 34.20000000000073,
+          "max": 34.30000000000109,
+          "over50": 0,
+          "over100": 0,
+          "renders": 91,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close0": {
+          "frames": 54,
+          "mean": 33.333333333333336,
+          "p95": 34.19999999999891,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "open1": {
+          "frames": 90,
+          "mean": 33.333333333333336,
+          "p95": 34.19999999999709,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 90,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close1": {
+          "frames": 54,
+          "mean": 33.333333333333336,
+          "p95": 34.29999999999927,
+          "max": 34.400000000001455,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "idleEnd": {
+          "frames": 24,
+          "mean": 33.333333333333336,
+          "p95": 34.20000000000073,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 6,
+          "drawCalls": 228,
+          "triangles": 208123
+        }
+      },
+      "rendererMemoryMiB": {
+        "start": 147.18,
+        "scroll0": 211.75,
+        "scroll1": 211.77,
+        "open0": 228.88,
+        "open1": 228.88,
+        "end": 223.5
+      },
+      "resources": {
+        "requests": 120,
+        "covers": 108,
+        "bytes": 1857
+      },
+      "firstOpenSetupMs": 0.800000011920929
+    },
+    "simple-wood-desktop": {
+      "flags": {
+        "simpleWood": true
+      },
+      "readyAtMs": 949,
+      "canvas": [
+        2880,
+        1800
+      ],
+      "proceduralWood": false,
+      "phases": {
+        "idle": {
+          "frames": 16,
+          "mean": 65.1,
+          "p95": 374.9000000000001,
+          "max": 374.9000000000001,
+          "over50": 2,
+          "over100": 2,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 121,
+          "mean": 33.333057851239666,
+          "p95": 34.29999999999973,
+          "max": 34.40000000000009,
+          "over50": 0,
+          "over100": 0,
+          "renders": 119,
+          "drawCalls": 446,
+          "triangles": 329563
+        },
+        "scroll1": {
+          "frames": 121,
+          "mean": 33.333884297520655,
+          "p95": 34.30000000000018,
+          "max": 34.30000000000109,
+          "over50": 0,
+          "over100": 0,
+          "renders": 121,
+          "drawCalls": 446,
+          "triangles": 329563
+        },
+        "open0": {
+          "frames": 90,
+          "mean": 33.333333333333336,
+          "p95": 34.19999999999891,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 90,
+          "drawCalls": 282,
+          "triangles": 208765
+        },
+        "close0": {
+          "frames": 54,
+          "mean": 33.333333333333336,
+          "p95": 34.29999999999927,
+          "max": 34.30000000000109,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 282,
+          "triangles": 208765
+        },
+        "open1": {
+          "frames": 90,
+          "mean": 33.333333333333336,
+          "p95": 34.099999999998545,
+          "max": 34.30000000000109,
+          "over50": 0,
+          "over100": 0,
+          "renders": 90,
+          "drawCalls": 282,
+          "triangles": 208765
+        },
+        "close1": {
+          "frames": 54,
+          "mean": 33.333333333333336,
+          "p95": 34.29999999999927,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 282,
+          "triangles": 208765
+        },
+        "idleEnd": {
+          "frames": 24,
+          "mean": 33.333333333333336,
+          "p95": 34.19999999999709,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 6,
+          "drawCalls": 278,
+          "triangles": 208123
+        }
+      },
+      "rendererMemoryMiB": {
+        "start": 191.97,
+        "scroll0": 256.54,
+        "scroll1": 256.56,
+        "open0": 273.67,
+        "open1": 273.67,
+        "end": 268.29
+      },
+      "resources": {
+        "requests": 120,
+        "covers": 108,
+        "bytes": 1857
+      },
+      "firstOpenSetupMs": 0.699999988079071
+    },
+    "webgl-desktop": {
+      "flags": {
+        "webgl": true
+      },
+      "readyAtMs": 940.7,
+      "canvas": [
+        2880,
+        1800
+      ],
+      "proceduralWood": false,
+      "phases": {
+        "idle": {
+          "frames": 30,
+          "mean": 33.336666666666666,
+          "p95": 34.200000000000045,
+          "max": 34.200000000000045,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 121,
+          "mean": 33.33223140495868,
+          "p95": 33.600000000000364,
+          "max": 34.30000000000018,
+          "over50": 0,
+          "over100": 0,
+          "renders": 119,
+          "drawCalls": 446,
+          "triangles": 329563
+        },
+        "scroll1": {
+          "frames": 121,
+          "mean": 33.333884297520655,
+          "p95": 34.29999999999927,
+          "max": 34.30000000000109,
+          "over50": 0,
+          "over100": 0,
+          "renders": 121,
+          "drawCalls": 446,
+          "triangles": 329563
+        },
+        "open0": {
+          "frames": 67,
+          "mean": 44.650746268656725,
+          "p95": 34.30000000000109,
+          "max": 600.1000000000004,
+          "over50": 3,
+          "over100": 2,
+          "renders": 67,
+          "drawCalls": 282,
+          "triangles": 208765
+        },
+        "close0": {
+          "frames": 54,
+          "mean": 33.34444444444445,
+          "p95": 34.20000000000073,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 282,
+          "triangles": 208765
+        },
+        "open1": {
+          "frames": 90,
+          "mean": 33.32333333333334,
+          "p95": 34.099999999998545,
+          "max": 34.20000000000073,
+          "over50": 0,
+          "over100": 0,
+          "renders": 90,
+          "drawCalls": 282,
+          "triangles": 208765
+        },
+        "close1": {
+          "frames": 54,
+          "mean": 33.3407407407407,
+          "p95": 34.20000000000073,
+          "max": 34.29999999999927,
+          "over50": 0,
+          "over100": 0,
+          "renders": 54,
+          "drawCalls": 282,
+          "triangles": 208765
+        },
+        "idleEnd": {
+          "frames": 24,
+          "mean": 33.316666666666755,
+          "p95": 34.20000000000073,
+          "max": 34.20000000000073,
+          "over50": 0,
+          "over100": 0,
+          "renders": 6,
+          "drawCalls": 278,
+          "triangles": 208123
+        }
+      },
+      "rendererMemoryMiB": {
+        "start": 191.86,
+        "scroll0": 256.33,
+        "scroll1": 256.35,
+        "open0": 273.45,
+        "open1": 273.45,
+        "end": 268.08
+      },
+      "resources": {
+        "requests": 120,
+        "covers": 108,
+        "bytes": 1857
+      },
+      "firstOpenSetupMs": 0.7999999970197678
+    },
+    "before-ios": {
+      "flags": {},
+      "readyAtMs": 1731,
+      "canvas": [
+        804,
+        1428
+      ],
+      "proceduralWood": false,
+      "phases": {
+        "idle": {
+          "frames": 60,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 112,
+          "mean": 35.86607142857143,
+          "p95": 104,
+          "max": 140,
+          "over50": 25,
+          "over100": 10,
+          "renders": 110,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "scroll1": {
+          "frames": 146,
+          "mean": 27.506849315068493,
+          "p95": 102,
+          "max": 135,
+          "over50": 13,
+          "over100": 8,
+          "renders": 146,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "open0": {
+          "frames": 104,
+          "mean": 28.85576923076923,
+          "p95": 22,
+          "max": 1112,
+          "over50": 2,
+          "over100": 2,
+          "renders": 104,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.65740740740741,
+          "p95": 17,
+          "max": 20,
+          "over50": 0,
+          "over100": 0,
+          "renders": 85,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "open1": {
+          "frames": 175,
+          "mean": 17.13714285714286,
+          "p95": 18,
+          "max": 117,
+          "over50": 1,
+          "over100": 1,
+          "renders": 175,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.675925925925927,
+          "p95": 17,
+          "max": 18,
+          "over50": 0,
+          "over100": 0,
+          "renders": 85,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "idleEnd": {
+          "frames": 48,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        }
+      },
+      "rendererMemoryMiB": {
+        "start": 146.59,
+        "scroll0": 337.13,
+        "scroll1": 337.15,
+        "open0": 354.24,
+        "open1": 354.24,
+        "end": 348.87
+      },
+      "resources": {
+        "requests": 83,
+        "covers": 74,
+        "bytes": 4408107
+      },
+      "firstOpenSetupMs": 1099
+    },
+    "current-ios": {
+      "flags": {},
+      "readyAtMs": 1745,
+      "canvas": [
+        804,
+        1428
+      ],
+      "proceduralWood": false,
+      "phases": {
+        "idle": {
+          "frames": 60,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 158,
+          "mean": 25.417721518987342,
+          "p95": 97,
+          "max": 177,
+          "over50": 15,
+          "over100": 5,
+          "renders": 156,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "scroll1": {
+          "frames": 177,
+          "mean": 22.694915254237287,
+          "p95": 94,
+          "max": 103,
+          "over50": 13,
+          "over100": 2,
+          "renders": 177,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "open0": {
+          "frames": 171,
+          "mean": 17.54385964912281,
+          "p95": 18,
+          "max": 166,
+          "over50": 1,
+          "over100": 1,
+          "renders": 171,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 18,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "open1": {
+          "frames": 173,
+          "mean": 17.341040462427745,
+          "p95": 17,
+          "max": 124,
+          "over50": 1,
+          "over100": 1,
+          "renders": 173,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 18,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "idleEnd": {
+          "frames": 48,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 11,
+          "drawCalls": 128,
+          "triangles": 88343
+        }
+      },
+      "rendererMemoryMiB": {
+        "start": 113.6,
+        "scroll0": 135.51,
+        "scroll1": 135.53,
+        "open0": 152.62,
+        "open1": 152.63,
+        "end": 147.26
+      },
+      "resources": {
+        "requests": 84,
+        "covers": 74,
+        "bytes": 4418402
+      },
+      "firstOpenSetupMs": 1
+    },
+    "no-shadows-ios": {
+      "flags": {
+        "noShadows": true
+      },
+      "readyAtMs": 1740,
+      "canvas": [
+        804,
+        1428
+      ],
+      "proceduralWood": false,
+      "phases": {
+        "idle": {
+          "frames": 60,
+          "mean": 16.683333333333334,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 171,
+          "mean": 23.485380116959064,
+          "p95": 96,
+          "max": 114,
+          "over50": 15,
+          "over100": 5,
+          "renders": 169,
+          "drawCalls": 86,
+          "triangles": 55243
+        },
+        "scroll1": {
+          "frames": 182,
+          "mean": 21.978021978021978,
+          "p95": 93,
+          "max": 124,
+          "over50": 13,
+          "over100": 3,
+          "renders": 182,
+          "drawCalls": 86,
+          "triangles": 55243
+        },
+        "open0": {
+          "frames": 172,
+          "mean": 17.441860465116278,
+          "p95": 17,
+          "max": 164,
+          "over50": 1,
+          "over100": 1,
+          "renders": 172,
+          "drawCalls": 60,
+          "triangles": 38505
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 60,
+          "triangles": 38505
+        },
+        "open1": {
+          "frames": 173,
+          "mean": 17.341040462427745,
+          "p95": 17,
+          "max": 143,
+          "over50": 1,
+          "over100": 1,
+          "renders": 173,
+          "drawCalls": 60,
+          "triangles": 38505
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 60,
+          "triangles": 38505
+        },
+        "idleEnd": {
+          "frames": 48,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 11,
+          "drawCalls": 56,
+          "triangles": 37863
+        }
+      },
+      "rendererMemoryMiB": {
+        "start": 81.54,
+        "scroll0": 103.44,
+        "scroll1": 103.46,
+        "open0": 120.53,
+        "open1": 120.53,
+        "end": 115.16
+      },
+      "resources": {
+        "requests": 84,
+        "covers": 74,
+        "bytes": 4418418
+      },
+      "firstOpenSetupMs": 1
+    },
+    "retained-ios": {
+      "flags": {
+        "retainSleeves": true
+      },
+      "readyAtMs": 1672,
+      "canvas": [
+        804,
+        1428
+      ],
+      "proceduralWood": false,
+      "phases": {
+        "idle": {
+          "frames": 60,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 194,
+          "mean": 20.70618556701031,
+          "p95": 33,
+          "max": 101,
+          "over50": 9,
+          "over100": 1,
+          "renders": 192,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "scroll1": {
+          "frames": 235,
+          "mean": 17.085106382978722,
+          "p95": 20,
+          "max": 25,
+          "over50": 0,
+          "over100": 0,
+          "renders": 235,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "open0": {
+          "frames": 172,
+          "mean": 17.53488372093023,
+          "p95": 17,
+          "max": 166,
+          "over50": 1,
+          "over100": 1,
+          "renders": 172,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "open1": {
+          "frames": 175,
+          "mean": 17.142857142857142,
+          "p95": 17,
+          "max": 114,
+          "over50": 1,
+          "over100": 1,
+          "renders": 175,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.685185185185187,
+          "p95": 17,
+          "max": 28,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "idleEnd": {
+          "frames": 48,
+          "mean": 16.645833333333332,
+          "p95": 17,
+          "max": 18,
+          "over50": 0,
+          "over100": 0,
+          "renders": 11,
+          "drawCalls": 128,
+          "triangles": 88343
+        }
+      },
+      "rendererMemoryMiB": {
+        "start": 113.6,
+        "scroll0": 210.16,
+        "scroll1": 210.16,
+        "open0": 227.26,
+        "open1": 227.26,
+        "end": 221.89
+      },
+      "resources": {
+        "requests": 40,
+        "covers": 30,
+        "bytes": 4418783
+      },
+      "firstOpenSetupMs": 1
+    }
+  },
+  "foregroundOnlyDiagnostic": {
+    "full": {
+      "calls": 260,
+      "frameCalls": 3,
+      "drawCalls": 232,
+      "triangles": 208765,
+      "points": 0,
+      "lines": 0,
+      "timestamp": 0
+    },
+    "foreground": {
+      "calls": 320,
+      "frameCalls": 2,
+      "drawCalls": 11,
+      "triangles": 5763,
+      "points": 0,
+      "lines": 0,
+      "timestamp": 0
+    },
+    "note": "Hides background geometry and freezes shadow updates after opening; demonstrates possible work reduction, not a completed visually equivalent implementation."
+  }
+}

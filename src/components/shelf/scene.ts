@@ -6,12 +6,14 @@ import { createPlankGeometry, createSleeveGeometry } from './geometry'
 import { createWoodMaterial } from './wood-material'
 import {
   createDiscTexture,
+  updateDiscTexture,
   createSleeveTexture,
   getVinylMaps,
   getSleevePaperMaps,
   loadOakMaps,
   type OakMaps,
-  loadCoverImage,
+  loadCoverBlob,
+  prepareTextureMaps,
 } from './textures'
 
 export type SleeveInfo = { id: number; artist: string; title: string; coverUrl: string | null }
@@ -27,12 +29,17 @@ const PLANK_FRONT = 18
 const PLANK_DEPTH = 56
 const WALL_Z = PLANK_FRONT - PLANK_DEPTH
 const SPIN_SPEED = (100 / 3 / 60) * Math.PI * 2
-const TRAVEL_SECONDS = 0.75
+const TRAVEL_SECONDS = 0.32
 const SHELF_CLEARANCE_FRACTION = 0.3
-const SLIDE_SECONDS = 0.9
+const SLIDE_SECONDS = 0.35
 const SCRIM_OPACITY = 0.94
 // The wood shader's distance filtering is designed for metre-scale scenes.
 const WORLD_SCALE = 0.001
+// The largest shelf cover is ~460 device pixels at the renderer's DPR cap.
+const SHELF_TEXTURE_SIZE = 512
+const SELECTED_TEXTURE_SIZE = 1024
+const MAX_RETAINED_SLEEVES = 24
+const RETAINED_ARTWORK_BYTES = 64 * 1024 * 1024
 
 type Pose = { x: number; y: number; z: number; size: number; rx: number; ry: number }
 
@@ -41,8 +48,10 @@ type Sleeve = {
   element: HTMLElement
   group: THREE.Group
   front: THREE.MeshStandardMaterial
-  texture: THREE.CanvasTexture | null
+  texture: THREE.CanvasTexture<ImageBitmap> | null
   abort: AbortController
+  cover: Blob | null
+  nearby: boolean
   /** How far the hover tilt has eased in, from 0 to 1. */
   tilt: number
 }
@@ -58,7 +67,11 @@ type Selection = {
   speed: number
   angle: number
   onClosed: (() => void) | null
+  artworkAbort: AbortController
+  artwork: THREE.CanvasTexture<ImageBitmap> | null
 }
+
+type Preview = { disc: THREE.Mesh; material: THREE.MeshPhysicalMaterial; texture: ReturnType<typeof createDiscTexture> }
 
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
 const approach = (current: number, target: number, rate: number, dt: number) =>
@@ -90,6 +103,8 @@ export class ShelfScene {
   private readonly edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xc9c1b1, roughness: 0.95 })
   private readonly backMaterial = new THREE.MeshStandardMaterial({ color: 0xd9d1c1, roughness: 0.95 })
   private readonly rimMaterial = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.35 })
+  // Keep the mapped shader in use while artwork loads, including between lazy-loaded rows.
+  private readonly placeholder = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1)
   private readonly plankOffsets = new WeakMap<HTMLElement, number>()
   // Retain visited planks so hiding every row cannot evict the shared shader.
   // The separate `planks` map contains only rows that need layout updates and drawing.
@@ -101,22 +116,32 @@ export class ShelfScene {
   private readonly resizeObserver: ResizeObserver
   private readonly tracked = new Map<HTMLElement, SleeveInfo | 'plank'>()
   private readonly sleeves = new Map<HTMLElement, Sleeve>()
+  // Only detached, inactive sleeves live here, in least-recently-used order.
+  private readonly sleeveCache = new Map<HTMLElement, Sleeve>()
   private readonly planks = new Map<HTMLElement, THREE.Mesh>()
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   private hovered: number | null = null
   private selection: Selection | null = null
   private width = 1
   private height = 1
+  private viewportReady = false
   private distance = 1
   private frame = 0
   private lastTime = 0
   private layoutObserved = false
+  private disposed = false
+  private preview: Preview | null = null
+  private previewWarmTimer: ReturnType<typeof setTimeout> | null = null
+  private previewWarming: Promise<void> | null = null
 
   static async create(canvas: HTMLCanvasElement, onReady: () => void = () => {}): Promise<ShelfScene> {
     const renderer = new WebGPURenderer({ canvas, alpha: true, antialias: true })
     try {
       await renderer.init()
-      const oak = await loadOakMaps(renderer.getMaxAnisotropy())
+      const [oak] = await Promise.all([
+        loadOakMaps(renderer.getMaxAnisotropy()),
+        prepareTextureMaps(),
+      ])
       return new ShelfScene(canvas, renderer, oak, onReady)
     } catch (error) {
       renderer.dispose()
@@ -133,6 +158,8 @@ export class ShelfScene {
     this.renderer = renderer
     this.woodNodes = 'isWebGPUBackend' in renderer.backend && renderer.backend.isWebGPUBackend === true
     this.scene.scale.setScalar(WORLD_SCALE)
+    this.placeholder.colorSpace = THREE.SRGBColorSpace
+    this.placeholder.needsUpdate = true
     this.camera.near = WORLD_SCALE
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.toneMapping = THREE.NeutralToneMapping
@@ -217,10 +244,31 @@ export class ShelfScene {
     const sleeve = [...this.sleeves.values()].find((candidate) => candidate.info.id === id)
     if (!sleeve || this.selection) return
 
+    if (this.previewWarmTimer) clearTimeout(this.previewWarmTimer)
+    this.previewWarmTimer = null
+    const { disc, material, texture } = this.getPreview()
+    updateDiscTexture(texture, sleeve.texture?.image ?? null)
+    disc.position.set(0, 0.5, 0)
+    disc.rotation.z = Math.PI / 2
+    disc.visible = false
+    sleeve.group.add(disc)
+
+    const selection: Selection = {
+      sleeve, stage, disc, material, open: true, travel: 0, slide: 0, speed: 0, angle: 0,
+      onClosed: null, artworkAbort: new AbortController(), artwork: null,
+    }
+    this.selection = selection
+    void this.loadSelectedArtwork(selection)
+    this.requestRender()
+  }
+
+  private getPreview(): Preview {
+    if (this.preview) return this.preview
     const { roughness, normal, anisotropy } = getVinylMaps()
     const maxAnisotropy = this.renderer.getMaxAnisotropy()
+    const texture = createDiscTexture(null, maxAnisotropy)
     const material = new THREE.MeshPhysicalMaterial({
-      map: createDiscTexture(sleeve.texture?.image ?? null, maxAnisotropy),
+      map: texture,
       roughnessMap: roughness,
       roughness: 1,
       normalMap: normal,
@@ -234,25 +282,21 @@ export class ShelfScene {
     })
     const disc = new THREE.Mesh(this.discGeometry, [this.rimMaterial, material, material])
     disc.position.y = 0.5
-    disc.visible = false
+    // Compile this detached mesh against the real scene before its first reveal.
+    disc.frustumCulled = false
     // Inside the sleeve the record sits just behind the cover, and its shadow-map depth
     // speckles the cover mid-flight. Its shadow would only land behind the backdrop anyway.
     disc.castShadow = false
-    sleeve.group.add(disc)
+    return this.preview = { disc, material, texture }
+  }
 
-    this.selection = {
-      sleeve,
-      stage,
-      disc,
-      material,
-      open: true,
-      travel: 0,
-      slide: 0,
-      speed: 0,
-      angle: 0,
-      onClosed: null,
-    }
-    this.requestRender()
+  private warmPreview() {
+    this.previewWarmTimer = null
+    if (this.disposed || this.selection) return
+    const { disc } = this.getPreview()
+    // compileAsync builds the small disc's textures/pipeline with yields; it never
+    // draws a hidden full-window frame or changes the visible shelf.
+    this.previewWarming = this.renderer.compileAsync(disc, this.camera, this.scene).catch(() => {})
   }
 
   /** Slides the record back in and returns the sleeve to its shelf, then calls `onClosed`. */
@@ -262,25 +306,41 @@ export class ShelfScene {
       return
     }
     this.selection.open = false
+    this.selection.artworkAbort.abort()
     this.selection.onClosed = onClosed
     this.requestRender()
   }
 
   requestRender = () => {
+    if (this.disposed) return
     if (!this.frame) this.frame = requestAnimationFrame(this.tick)
   }
 
   dispose() {
+    if (this.disposed) return
+    this.disposed = true
+    if (this.previewWarmTimer) clearTimeout(this.previewWarmTimer)
     this.onReady = null
     cancelAnimationFrame(this.frame)
     window.removeEventListener('scroll', this.requestRender)
     this.observer.disconnect()
     this.resizeObserver.disconnect()
+    for (const sleeve of [...this.sleeves.values(), ...this.sleeveCache.values()]) sleeve.abort.abort()
+    this.selection?.artworkAbort.abort()
+    if (this.previewWarming) void this.previewWarming.then(() => this.disposeResources())
+    else this.disposeResources()
+  }
+
+  private disposeResources() {
+    this.tracked.clear()
     this.clearSelection()
     for (const element of [...this.sleeves.keys(), ...this.planks.keys()]) this.deactivate(element)
+    for (const sleeve of this.sleeveCache.values()) this.disposeSleeve(sleeve)
+    this.sleeveCache.clear()
     for (const element of this.plankCache.keys()) this.disposePlank(element)
     this.sleeveGeometry.dispose()
     this.discGeometry.dispose()
+    this.placeholder.dispose()
     for (const material of [
       this.edgeMaterial, this.backMaterial, this.rimMaterial,
     ]) {
@@ -291,6 +351,8 @@ export class ShelfScene {
     this.scrim.geometry.dispose()
     this.scrim.material.dispose()
     this.environment.dispose()
+    this.preview?.texture.dispose()
+    this.preview?.material.dispose()
     this.renderer.dispose()
   }
 
@@ -323,10 +385,20 @@ export class ShelfScene {
       this.scene.add(plank)
       return
     }
-    if (this.sleeves.has(element)) return
+    const active = this.sleeves.get(element)
+    if (active) { active.nearby = true; return }
+    const retained = this.sleeveCache.get(element)
+    if (retained) {
+      this.sleeveCache.delete(element)
+      retained.nearby = true
+      this.sleeves.set(element, retained)
+      this.scene.add(retained.group)
+      return
+    }
 
     const paper = getSleevePaperMaps()
     const front = new THREE.MeshStandardMaterial({
+      map: this.placeholder,
       color: 0xc9b896,
       roughness: 1,
       roughnessMap: paper.roughness,
@@ -355,6 +427,8 @@ export class ShelfScene {
       front,
       texture: null,
       abort: new AbortController(),
+      cover: null,
+      nearby: true,
       tilt: 0,
     }
     this.sleeves.set(element, sleeve)
@@ -362,28 +436,54 @@ export class ShelfScene {
   }
 
   private async loadCover(sleeve: Sleeve) {
-    let image: ImageBitmap | null = null
+    let image: Blob | null = null
     if (sleeve.info.coverUrl) {
       try {
-        image = await loadCoverImage(sleeve.info.coverUrl, sleeve.abort.signal)
+        image = await loadCoverBlob(sleeve.info.coverUrl, sleeve.abort.signal)
       } catch {
         if (sleeve.abort.signal.aborted) return
       }
     }
     if (sleeve.abort.signal.aborted) {
-      image?.close()
       return
     }
-    sleeve.texture = createSleeveTexture(
+    sleeve.cover = image
+    this.trimSleeveCache()
+    if (sleeve.abort.signal.aborted) return
+    const texture = await createSleeveTexture(
       image,
       sleeve.info,
       this.renderer.getMaxAnisotropy(),
+      SHELF_TEXTURE_SIZE,
     )
-    image?.close()
-    sleeve.front.map = sleeve.texture
+    if (sleeve.abort.signal.aborted) {
+      texture.dispose()
+      return
+    }
+    sleeve.texture = texture
+    sleeve.front.map = this.selection?.sleeve === sleeve && this.selection.artwork
+      ? this.selection.artwork : texture
     sleeve.front.color.set(0xffffff)
     sleeve.front.needsUpdate = true
-    this.requestRender()
+    this.trimSleeveCache()
+    if (sleeve.nearby) this.requestRender()
+  }
+
+  private async loadSelectedArtwork(selection: Selection) {
+    const signal = selection.artworkAbort.signal
+    const sleeve = selection.sleeve
+    try {
+      const cover = sleeve.cover ?? (sleeve.info.coverUrl ? await loadCoverBlob(sleeve.info.coverUrl, signal) : null)
+      if (signal.aborted) return
+      const artwork = await createSleeveTexture(cover, sleeve.info, this.renderer.getMaxAnisotropy(), SELECTED_TEXTURE_SIZE)
+      if (signal.aborted || this.selection !== selection) { artwork.dispose(); return }
+      selection.artwork = artwork
+      sleeve.front.map = artwork
+      sleeve.front.color.set(0xffffff)
+      this.requestRender()
+    } catch {
+      // The cached shelf artwork stays visible if the larger preview cannot load.
+    }
   }
 
   private deactivate(element: HTMLElement) {
@@ -393,12 +493,46 @@ export class ShelfScene {
       this.planks.delete(element)
     }
     const sleeve = this.sleeves.get(element)
-    if (!sleeve || this.selection?.sleeve === sleeve) return
+    if (!sleeve) {
+      if (!this.tracked.has(element)) {
+        const retained = this.sleeveCache.get(element)
+        if (retained) this.disposeSleeve(retained)
+        this.sleeveCache.delete(element)
+      }
+      return
+    }
+    sleeve.nearby = false
+    if (this.selection?.sleeve === sleeve) return
+    this.scene.remove(sleeve.group)
+    this.sleeves.delete(element)
+    sleeve.tilt = 0
+    if (this.tracked.has(element)) {
+      this.sleeveCache.set(element, sleeve)
+      this.trimSleeveCache()
+    } else this.disposeSleeve(sleeve)
+  }
+
+  private disposeSleeve(sleeve: Sleeve) {
     sleeve.abort.abort()
     sleeve.texture?.dispose()
     sleeve.front.dispose()
-    this.scene.remove(sleeve.group)
-    this.sleeves.delete(element)
+    sleeve.cover = null
+  }
+
+  private trimSleeveCache() {
+    // Account for the retained source blob, decoded RGBA bitmap and GPU mip chain.
+    const bytes = (sleeve: Sleeve) => {
+      const image = sleeve.texture?.image
+      return (image ? image.width * image.height : SHELF_TEXTURE_SIZE ** 2) * (4 + 16 / 3)
+        + (sleeve.cover?.size ?? 0)
+    }
+    let used = [...this.sleeveCache.values()].reduce((total, sleeve) => total + bytes(sleeve), 0)
+    for (const [element, sleeve] of this.sleeveCache) {
+      if (this.sleeveCache.size <= MAX_RETAINED_SLEEVES && used <= RETAINED_ARTWORK_BYTES) break
+      used -= bytes(sleeve)
+      this.sleeveCache.delete(element)
+      this.disposeSleeve(sleeve)
+    }
   }
 
   private disposePlank(element: HTMLElement) {
@@ -412,16 +546,29 @@ export class ShelfScene {
   private clearSelection() {
     const selection = this.selection
     if (!selection) return
+    selection.artworkAbort.abort()
+    selection.sleeve.front.map = selection.sleeve.texture ?? this.placeholder
+    selection.artwork?.dispose()
     selection.sleeve.group.remove(selection.disc)
-    selection.material.map?.dispose()
-    selection.material.dispose()
+    // Keep the disc's shader and texture allocation for the next selected record.
     this.selection = null
-    if (!this.tracked.has(selection.sleeve.element)) this.deactivate(selection.sleeve.element)
+    if (!selection.sleeve.nearby || !this.tracked.has(selection.sleeve.element)) this.deactivate(selection.sleeve.element)
   }
 
   private resize = () => {
-    this.width = this.canvas.clientWidth || 1
-    this.height = this.canvas.clientHeight || 1
+    // ResizeObserver runs after animation callbacks, immediately before paint.
+    // Clearing the drawing buffer here exposes a blank frame when Safari's
+    // toolbar changes height. Resize and draw together in the next tick instead.
+    this.requestRender()
+  }
+
+  private updateViewport() {
+    const width = this.canvas.clientWidth || 1
+    const height = this.canvas.clientHeight || 1
+    if (this.viewportReady && width === this.width && height === this.height) return
+    this.viewportReady = true
+    this.width = width
+    this.height = height
     this.renderer.setSize(this.width, this.height, false)
     this.distance = this.height / 2 / Math.tan(THREE.MathUtils.degToRad(FOV / 2))
     this.camera.aspect = this.width / this.height
@@ -440,7 +587,6 @@ export class ShelfScene {
 
     this.fitToView(this.wall, WALL_Z, 1.4)
     this.fitToView(this.scrim, SCRIM_Z, 1.1)
-    this.requestRender()
   }
 
   private fitToView(mesh: THREE.Mesh, z: number, margin: number) {
@@ -466,6 +612,7 @@ export class ShelfScene {
 
   private tick = (now: number) => {
     this.frame = 0
+    this.updateViewport()
     const dt = this.lastTime ? Math.min((now - this.lastTime) / 1000, 1 / 20) : 1 / 60
     this.lastTime = now
     const animating = this.update(dt)
@@ -476,6 +623,8 @@ export class ShelfScene {
       const onReady = this.onReady
       this.onReady = null
       onReady()
+      // First show the shelf. Warm only its single detached preview object afterward.
+      this.previewWarmTimer = setTimeout(() => this.warmPreview(), 250)
     }
     if (animating) this.requestRender()
     else this.lastTime = 0
@@ -514,7 +663,9 @@ export class ShelfScene {
       plank.scale.set(rect.width, rect.height, PLANK_DEPTH)
       if (plank.userData.width !== rect.width || plank.userData.height !== rect.height) {
         plank.geometry.dispose()
-        plank.geometry = createPlankGeometry(rect.width, rect.height, PLANK_DEPTH)
+        plank.geometry = createPlankGeometry(
+          rect.width, rect.height, PLANK_DEPTH, this.plankCache.get(element)?.wood.grain,
+        )
         plank.userData.width = rect.width
         plank.userData.height = rect.height
       }

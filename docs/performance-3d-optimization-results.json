@@ -1,0 +1,4328 @@
+{
+  "date": "2026-10-23",
+  "comparison": "Current full-3D shelf before versus bounded caching, preview reuse/precompilation and shorter motion",
+  "collectionRecords": 52,
+  "method": "Instrumented production copies; same two4-second0\u20132400\u20130 CSS pixel scroll loops and two opens. Stress: three whole-collection round trips plus five opens. Early: omit initial1-second idle. No simultaneous foreground test workloads.",
+  "limitations": [
+    "iPhone17 Simulator Safari iOS26.5; not a physical iPhone.",
+    "Scripted scroll frame intervals do not establish native touch/trackpad input latency.",
+    "Three renderer allocation accounting is not total process memory.",
+    "HTTP/resource caches and unrelated iframe/GPU/simulator scheduling affect cold-opening maxima.",
+    "Full sweeps exceed the retained working set, so evicted artwork must upload again."
+  ],
+  "scenarios": {
+    "desktop-baseline": {
+      "flags": {},
+      "backend": "lP",
+      "woodNodes": true,
+      "readyAt": 1176.7,
+      "viewport": [
+        1440,
+        900,
+        2
+      ],
+      "canvas": [
+        2880,
+        1800
+      ],
+      "phases": {
+        "idle": {
+          "frames": 121,
+          "mean": 8.335537190082643,
+          "p95": 9.099999999999909,
+          "max": 9.400000000000091,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 481,
+          "mean": 8.332432432432434,
+          "p95": 9,
+          "max": 9.399999999999636,
+          "over50": 0,
+          "over100": 0,
+          "renders": 479,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "scroll1": {
+          "frames": 480,
+          "mean": 8.334166666666667,
+          "p95": 9.099999999998545,
+          "max": 12.100000000000364,
+          "over50": 0,
+          "over100": 0,
+          "renders": 480,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "open0": {
+          "frames": 358,
+          "mean": 8.379329608938546,
+          "p95": 9.200000000000728,
+          "max": 25.100000000000364,
+          "over50": 0,
+          "over100": 0,
+          "renders": 358,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close0": {
+          "frames": 216,
+          "mean": 8.330555555555563,
+          "p95": 9.200000000000728,
+          "max": 9.300000000001091,
+          "over50": 0,
+          "over100": 0,
+          "renders": 216,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "open1": {
+          "frames": 359,
+          "mean": 8.35877437325905,
+          "p95": 9.099999999998545,
+          "max": 16.700000000000728,
+          "over50": 0,
+          "over100": 0,
+          "renders": 359,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close1": {
+          "frames": 216,
+          "mean": 8.331944444444447,
+          "p95": 9.099999999998545,
+          "max": 9.399999999997817,
+          "over50": 0,
+          "over100": 0,
+          "renders": 216,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "idleEnd": {
+          "frames": 96,
+          "mean": 8.336458333333326,
+          "p95": 9.200000000000728,
+          "max": 9.30000000000291,
+          "over50": 0,
+          "over100": 0,
+          "renders": 21,
+          "drawCalls": 228,
+          "triangles": 208123
+        }
+      },
+      "cpu": {
+        "scroll0:update": {
+          "count": 479,
+          "ms": 36.79999993741512,
+          "max": 2.7999999970197678
+        },
+        "scroll0:render": {
+          "count": 958,
+          "ms": 885.3000000715256,
+          "max": 10.899999991059303
+        },
+        "scroll0:activate": {
+          "count": 54,
+          "ms": 8.900000005960464,
+          "max": 0.5999999940395355
+        },
+        "scroll0:deactivate": {
+          "count": 54,
+          "ms": 1.6000000089406967,
+          "max": 0.29999999701976776
+        },
+        "scroll1:update": {
+          "count": 480,
+          "ms": 47.69999995827675,
+          "max": 0.30000001192092896
+        },
+        "scroll1:render": {
+          "count": 960,
+          "ms": 1253.9999999403954,
+          "max": 4.700000002980232
+        },
+        "scroll1:activate": {
+          "count": 54,
+          "ms": 8.100000008940697,
+          "max": 0.5999999940395355
+        },
+        "scroll1:deactivate": {
+          "count": 54,
+          "ms": 1.699999988079071,
+          "max": 0.20000000298023224
+        },
+        "settle:update": {
+          "count": 2,
+          "ms": 0,
+          "max": 0
+        },
+        "settle:render": {
+          "count": 4,
+          "ms": 2.500000014901161,
+          "max": 1
+        },
+        "open0:open": {
+          "count": 1,
+          "ms": 0.5999999940395355,
+          "max": 0.5999999940395355
+        },
+        "open0:update": {
+          "count": 358,
+          "ms": 41.79999986290932,
+          "max": 0.5999999940395355
+        },
+        "open0:render": {
+          "count": 716,
+          "ms": 559.0000004321337,
+          "max": 30.900000005960464
+        },
+        "close0:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close0:update": {
+          "count": 216,
+          "ms": 23.300000071525574,
+          "max": 0.7000000029802322
+        },
+        "close0:render": {
+          "count": 432,
+          "ms": 306.4999999254942,
+          "max": 1.7999999970197678
+        },
+        "open1:open": {
+          "count": 1,
+          "ms": 0.29999999701976776,
+          "max": 0.29999999701976776
+        },
+        "open1:update": {
+          "count": 359,
+          "ms": 40.00000002980232,
+          "max": 0.4000000059604645
+        },
+        "open1:render": {
+          "count": 718,
+          "ms": 537.3000001162291,
+          "max": 17.5
+        },
+        "close1:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close1:update": {
+          "count": 216,
+          "ms": 31.69999985396862,
+          "max": 0.9000000059604645
+        },
+        "close1:render": {
+          "count": 432,
+          "ms": 477.5999998450279,
+          "max": 3.1000000089406967
+        },
+        "idleEnd:update": {
+          "count": 21,
+          "ms": 3.500000014901161,
+          "max": 0.4000000059604645
+        },
+        "idleEnd:render": {
+          "count": 42,
+          "ms": 65.70000004768372,
+          "max": 3.2000000029802322
+        }
+      },
+      "memory": {
+        "start": {
+          "attributes": 23,
+          "attributesSize": 310404,
+          "geometries": 9,
+          "indexAttributes": 8,
+          "indexAttributesSize": 204408,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 19,
+          "programsSize": 200731,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 25,
+          "texturesSize": 200247763,
+          "uniformBuffers": 88,
+          "uniformBuffersSize": 19824,
+          "total": 200983130
+        },
+        "scroll0": {
+          "attributes": 47,
+          "attributesSize": 660612,
+          "geometries": 17,
+          "indexAttributes": 16,
+          "indexAttributesSize": 432888,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 19,
+          "programsSize": 200731,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 38,
+          "texturesSize": 267339852,
+          "uniformBuffers": 254,
+          "uniformBuffersSize": 58192,
+          "total": 268692275
+        },
+        "scroll1": {
+          "attributes": 47,
+          "attributesSize": 660612,
+          "geometries": 17,
+          "indexAttributes": 16,
+          "indexAttributesSize": 432888,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 19,
+          "programsSize": 200731,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 38,
+          "texturesSize": 267339852,
+          "uniformBuffers": 368,
+          "uniformBuffersSize": 79984,
+          "total": 268714067
+        },
+        "open0": {
+          "attributes": 51,
+          "attributesSize": 691508,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 440592,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 25,
+          "programsSize": 274652,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 285161449,
+          "uniformBuffers": 373,
+          "uniformBuffersSize": 81264,
+          "total": 286649465
+        },
+        "open1": {
+          "attributes": 51,
+          "attributesSize": 691508,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 440592,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 25,
+          "programsSize": 274652,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 285161449,
+          "uniformBuffers": 374,
+          "uniformBuffersSize": 81520,
+          "total": 286649721
+        },
+        "end": {
+          "attributes": 51,
+          "attributesSize": 691508,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 440592,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 23,
+          "programsSize": 232118,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 41,
+          "texturesSize": 279570442,
+          "uniformBuffers": 373,
+          "uniformBuffersSize": 80944,
+          "total": 281015604
+        }
+      },
+      "longTasks": [],
+      "resources": {
+        "requests": 120,
+        "covers": 108,
+        "bytes": 6078325
+      },
+      "heap": 57600904,
+      "visibility": "visible"
+    },
+    "desktop-cache": {
+      "flags": {},
+      "backend": "lP",
+      "woodNodes": true,
+      "readyAt": 1194.8,
+      "viewport": [
+        1440,
+        900,
+        2
+      ],
+      "canvas": [
+        2880,
+        1800
+      ],
+      "phases": {
+        "idle": {
+          "frames": 120,
+          "mean": 8.339166666666669,
+          "p95": 8.900000000000091,
+          "max": 9.199999999999818,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 478,
+          "mean": 8.385564853556486,
+          "p95": 9.100000000000364,
+          "max": 16.699999999999818,
+          "over50": 0,
+          "over100": 0,
+          "renders": 475,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "scroll1": {
+          "frames": 480,
+          "mean": 8.350624999999999,
+          "p95": 9.100000000000364,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 480,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "open0": {
+          "frames": 352,
+          "mean": 8.522727272727273,
+          "p95": 9.100000000000364,
+          "max": 75.10000000000036,
+          "over50": 1,
+          "over100": 0,
+          "renders": 352,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close0": {
+          "frames": 216,
+          "mean": 8.333333333333334,
+          "p95": 9.199999999998909,
+          "max": 9.399999999999636,
+          "over50": 0,
+          "over100": 0,
+          "renders": 216,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "open1": {
+          "frames": 359,
+          "mean": 8.35654596100279,
+          "p95": 9.099999999998545,
+          "max": 16.799999999999272,
+          "over50": 0,
+          "over100": 0,
+          "renders": 359,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close1": {
+          "frames": 216,
+          "mean": 8.33287037037036,
+          "p95": 9,
+          "max": 9.299999999999272,
+          "over50": 0,
+          "over100": 0,
+          "renders": 216,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "idleEnd": {
+          "frames": 96,
+          "mean": 8.334375000000023,
+          "p95": 9.19999999999709,
+          "max": 9.400000000001455,
+          "over50": 0,
+          "over100": 0,
+          "renders": 21,
+          "drawCalls": 228,
+          "triangles": 208123
+        }
+      },
+      "cpu": {
+        "scroll0:update": {
+          "count": 475,
+          "ms": 76.2000000923872,
+          "max": 1.4000000059604645
+        },
+        "scroll0:render": {
+          "count": 950,
+          "ms": 2130.799999818206,
+          "max": 16.299999997019768
+        },
+        "scroll0:activate": {
+          "count": 54,
+          "ms": 10.899999991059303,
+          "max": 0.7000000029802322
+        },
+        "scroll0:deactivate": {
+          "count": 54,
+          "ms": 1.6000000089406967,
+          "max": 0.29999999701976776
+        },
+        "scroll1:update": {
+          "count": 480,
+          "ms": 63.699999898672104,
+          "max": 0.4000000059604645
+        },
+        "scroll1:render": {
+          "count": 960,
+          "ms": 1691.3000001460314,
+          "max": 3.7999999970197678
+        },
+        "scroll1:activate": {
+          "count": 54,
+          "ms": 0.800000011920929,
+          "max": 0.3999999910593033
+        },
+        "scroll1:deactivate": {
+          "count": 54,
+          "ms": 1.300000011920929,
+          "max": 0.20000000298023224
+        },
+        "settle:update": {
+          "count": 2,
+          "ms": 0,
+          "max": 0
+        },
+        "settle:render": {
+          "count": 4,
+          "ms": 5.499999985098839,
+          "max": 2.2999999970197678
+        },
+        "open0:open": {
+          "count": 1,
+          "ms": 1.4000000059604645,
+          "max": 1.4000000059604645
+        },
+        "open0:update": {
+          "count": 352,
+          "ms": 67.50000001490116,
+          "max": 0.9000000059604645
+        },
+        "open0:render": {
+          "count": 704,
+          "ms": 971.1999999433756,
+          "max": 73.09999999403954
+        },
+        "close0:close": {
+          "count": 1,
+          "ms": 0.09999999403953552,
+          "max": 0.09999999403953552
+        },
+        "close0:update": {
+          "count": 216,
+          "ms": 37.09999990463257,
+          "max": 1.2999999970197678
+        },
+        "close0:render": {
+          "count": 432,
+          "ms": 509.2000002563,
+          "max": 2.8999999910593033
+        },
+        "open1:open": {
+          "count": 1,
+          "ms": 0.5,
+          "max": 0.5
+        },
+        "open1:update": {
+          "count": 359,
+          "ms": 51.40000005066395,
+          "max": 0.4000000059604645
+        },
+        "open1:render": {
+          "count": 718,
+          "ms": 560.0000002682209,
+          "max": 16.299999997019768
+        },
+        "close1:close": {
+          "count": 1,
+          "ms": 0.10000000894069672,
+          "max": 0.10000000894069672
+        },
+        "close1:update": {
+          "count": 216,
+          "ms": 27.000000029802322,
+          "max": 0.5
+        },
+        "close1:render": {
+          "count": 432,
+          "ms": 281.5000000447035,
+          "max": 1.7000000029802322
+        },
+        "idleEnd:update": {
+          "count": 21,
+          "ms": 1.9000000208616257,
+          "max": 0.20000000298023224
+        },
+        "idleEnd:render": {
+          "count": 42,
+          "ms": 26.799999967217445,
+          "max": 1.300000011920929
+        }
+      },
+      "memory": {
+        "start": {
+          "attributes": 23,
+          "attributesSize": 310404,
+          "geometries": 9,
+          "indexAttributes": 8,
+          "indexAttributesSize": 204408,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 19,
+          "programsSize": 200731,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 25,
+          "texturesSize": 149928703,
+          "uniformBuffers": 88,
+          "uniformBuffersSize": 19824,
+          "total": 150664070
+        },
+        "scroll0": {
+          "attributes": 47,
+          "attributesSize": 660612,
+          "geometries": 17,
+          "indexAttributes": 16,
+          "indexAttributesSize": 432888,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 19,
+          "programsSize": 200731,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 57,
+          "texturesSize": 194656767,
+          "uniformBuffers": 226,
+          "uniformBuffersSize": 56720,
+          "total": 196007718
+        },
+        "scroll1": {
+          "attributes": 47,
+          "attributesSize": 660612,
+          "geometries": 17,
+          "indexAttributes": 16,
+          "indexAttributesSize": 432888,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 19,
+          "programsSize": 200731,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 57,
+          "texturesSize": 194656767,
+          "uniformBuffers": 228,
+          "uniformBuffersSize": 56880,
+          "total": 196007878
+        },
+        "open0": {
+          "attributes": 51,
+          "attributesSize": 691508,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 440592,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 25,
+          "programsSize": 274652,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 62,
+          "texturesSize": 218069371,
+          "uniformBuffers": 233,
+          "uniformBuffersSize": 58160,
+          "total": 219534283
+        },
+        "open1": {
+          "attributes": 51,
+          "attributesSize": 691508,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 440592,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 25,
+          "programsSize": 274652,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 62,
+          "texturesSize": 218069371,
+          "uniformBuffers": 234,
+          "uniformBuffersSize": 58416,
+          "total": 219534539
+        },
+        "end": {
+          "attributes": 51,
+          "attributesSize": 691508,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 440592,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 23,
+          "programsSize": 232118,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 60,
+          "texturesSize": 206887357,
+          "uniformBuffers": 233,
+          "uniformBuffersSize": 57840,
+          "total": 208309415
+        }
+      },
+      "longTasks": [
+        {
+          "phase": "open0",
+          "start": 11795.20000000298,
+          "duration": 73
+        }
+      ],
+      "resources": {
+        "requests": 64,
+        "covers": 52,
+        "bytes": 6079963
+      },
+      "heap": 91284266,
+      "visibility": "visible"
+    },
+    "desktop-final-stress": {
+      "viewport": [
+        1440,
+        900,
+        2
+      ],
+      "samples": [
+        {
+          "memory": {
+            "attributes": 50,
+            "attributesSize": 691460,
+            "geometries": 18,
+            "indexAttributes": 17,
+            "indexAttributesSize": 440568,
+            "indirectStorageAttributes": 0,
+            "indirectStorageAttributesSize": 0,
+            "programs": 23,
+            "programsSize": 271182,
+            "readbackBuffers": 0,
+            "readbackBuffersSize": 0,
+            "renderTargets": 3,
+            "storageAttributes": 0,
+            "storageAttributesSize": 0,
+            "textures": 66,
+            "texturesSize": 218069377,
+            "uniformBuffers": 263,
+            "uniformBuffersSize": 66016,
+            "total": 219538603
+          },
+          "active": 24,
+          "cached": 24,
+          "cacheBytes": 60969309.000000015,
+          "selected": false,
+          "slots": 52
+        },
+        {
+          "memory": {
+            "attributes": 50,
+            "attributesSize": 691460,
+            "geometries": 18,
+            "indexAttributes": 17,
+            "indexAttributesSize": 440568,
+            "indirectStorageAttributes": 0,
+            "indirectStorageAttributesSize": 0,
+            "programs": 23,
+            "programsSize": 271182,
+            "readbackBuffers": 0,
+            "readbackBuffersSize": 0,
+            "renderTargets": 3,
+            "storageAttributes": 0,
+            "storageAttributesSize": 0,
+            "textures": 66,
+            "texturesSize": 218069377,
+            "uniformBuffers": 287,
+            "uniformBuffersSize": 70752,
+            "total": 219543339
+          },
+          "active": 24,
+          "cached": 24,
+          "cacheBytes": 60969309.000000015,
+          "selected": false,
+          "slots": 52
+        },
+        {
+          "memory": {
+            "attributes": 50,
+            "attributesSize": 691460,
+            "geometries": 18,
+            "indexAttributes": 17,
+            "indexAttributesSize": 440568,
+            "indirectStorageAttributes": 0,
+            "indirectStorageAttributesSize": 0,
+            "programs": 23,
+            "programsSize": 271182,
+            "readbackBuffers": 0,
+            "readbackBuffersSize": 0,
+            "renderTargets": 3,
+            "storageAttributes": 0,
+            "storageAttributesSize": 0,
+            "textures": 66,
+            "texturesSize": 218069377,
+            "uniformBuffers": 311,
+            "uniformBuffersSize": 75488,
+            "total": 219548075
+          },
+          "active": 24,
+          "cached": 24,
+          "cacheBytes": 60969309.000000015,
+          "selected": false,
+          "slots": 52
+        }
+      ],
+      "end": {
+        "memory": {
+          "attributes": 51,
+          "attributesSize": 691508,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 440592,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 25,
+          "programsSize": 274652,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 66,
+          "texturesSize": 218069377,
+          "uniformBuffers": 313,
+          "uniformBuffersSize": 75696,
+          "total": 219551825
+        },
+        "active": 24,
+        "cached": 24,
+        "cacheBytes": 60969309.000000015,
+        "selected": false,
+        "slots": 52
+      },
+      "phases": {
+        "sweep0": {
+          "frames": 784,
+          "p95": 9.199999999999818,
+          "max": 33.700000000000045,
+          "over50": 0,
+          "over100": 0
+        },
+        "sweep1": {
+          "frames": 794,
+          "p95": 9.100000000000364,
+          "max": 9.300000000001091,
+          "over50": 0,
+          "over100": 0
+        },
+        "sweep2": {
+          "frames": 787,
+          "p95": 9,
+          "max": 17.700000000000728,
+          "over50": 0,
+          "over100": 0
+        },
+        "opens": {
+          "frames": 924,
+          "p95": 8.900000000001455,
+          "max": 9.400000000001455,
+          "over50": 0,
+          "over100": 0
+        }
+      },
+      "opens": [
+        {
+          "openMs": 666.0999999940395,
+          "closeMs": 568.7000000029802
+        },
+        {
+          "openMs": 667.3999999910593,
+          "closeMs": 567.1999999880791
+        },
+        {
+          "openMs": 664.8000000119209,
+          "closeMs": 584.6999999880791
+        },
+        {
+          "openMs": 681.3000000119209,
+          "closeMs": 569.6000000089407
+        },
+        {
+          "openMs": 666.3999999910593,
+          "closeMs": 567.5
+        }
+      ]
+    },
+    "desktop-final": {
+      "flags": {},
+      "backend": "lP",
+      "woodNodes": true,
+      "readyAt": 1056.7,
+      "viewport": [
+        1440,
+        900,
+        2
+      ],
+      "canvas": [
+        2880,
+        1800
+      ],
+      "phases": {
+        "idle": {
+          "frames": 119,
+          "mean": 8.40420168067227,
+          "p95": 9,
+          "max": 16.700000000000045,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 479,
+          "mean": 8.366805845511482,
+          "p95": 9,
+          "max": 16.799999999999727,
+          "over50": 0,
+          "over100": 0,
+          "renders": 477,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "scroll1": {
+          "frames": 480,
+          "mean": 8.351666666666665,
+          "p95": 9,
+          "max": 16.80000000000109,
+          "over50": 0,
+          "over100": 0,
+          "renders": 480,
+          "drawCalls": 356,
+          "triangles": 329563
+        },
+        "open0": {
+          "frames": 360,
+          "mean": 8.333333333333334,
+          "p95": 8.799999999999272,
+          "max": 9.399999999999636,
+          "over50": 0,
+          "over100": 0,
+          "renders": 360,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close0": {
+          "frames": 216,
+          "mean": 8.333333333333334,
+          "p95": 8.800000000001091,
+          "max": 9.300000000001091,
+          "over50": 0,
+          "over100": 0,
+          "renders": 139,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "open1": {
+          "frames": 360,
+          "mean": 8.333055555555555,
+          "p95": 8.600000000002183,
+          "max": 9.200000000000728,
+          "over50": 0,
+          "over100": 0,
+          "renders": 360,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "close1": {
+          "frames": 216,
+          "mean": 8.332870370370378,
+          "p95": 8.700000000000728,
+          "max": 9.100000000002183,
+          "over50": 0,
+          "over100": 0,
+          "renders": 139,
+          "drawCalls": 232,
+          "triangles": 208765
+        },
+        "idleEnd": {
+          "frames": 96,
+          "mean": 8.334374999999985,
+          "p95": 8.799999999999272,
+          "max": 9.299999999999272,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        }
+      },
+      "cpu": {
+        "scroll0:update": {
+          "count": 477,
+          "ms": 84.09999993443489,
+          "max": 1.2000000029802322
+        },
+        "scroll0:render": {
+          "count": 954,
+          "ms": 2409.5000001192093,
+          "max": 16.200000002980232
+        },
+        "scroll0:activate": {
+          "count": 54,
+          "ms": 10.699999958276749,
+          "max": 0.7000000029802322
+        },
+        "scroll0:deactivate": {
+          "count": 54,
+          "ms": 1.5999999642372131,
+          "max": 0.29999999701976776
+        },
+        "scroll1:update": {
+          "count": 480,
+          "ms": 71.89999997615814,
+          "max": 0.5999999940395355
+        },
+        "scroll1:render": {
+          "count": 960,
+          "ms": 1822.5999996215105,
+          "max": 4.5
+        },
+        "scroll1:activate": {
+          "count": 54,
+          "ms": 1.100000023841858,
+          "max": 0.5
+        },
+        "scroll1:deactivate": {
+          "count": 54,
+          "ms": 0.9000000059604645,
+          "max": 0.10000000894069672
+        },
+        "settle:update": {
+          "count": 2,
+          "ms": 0.3999999761581421,
+          "max": 0.19999998807907104
+        },
+        "settle:render": {
+          "count": 4,
+          "ms": 6.400000020861626,
+          "max": 2.4000000059604645
+        },
+        "open0:open": {
+          "count": 1,
+          "ms": 1,
+          "max": 1
+        },
+        "open0:update": {
+          "count": 360,
+          "ms": 54.00000010430813,
+          "max": 1
+        },
+        "open0:render": {
+          "count": 720,
+          "ms": 597.5999997109175,
+          "max": 3.0999999940395355
+        },
+        "close0:close": {
+          "count": 1,
+          "ms": 0.09999999403953552,
+          "max": 0.09999999403953552
+        },
+        "close0:update": {
+          "count": 139,
+          "ms": 30.39999996125698,
+          "max": 1.7999999970197678
+        },
+        "close0:render": {
+          "count": 278,
+          "ms": 383.30000011622906,
+          "max": 3.2000000029802322
+        },
+        "open1:open": {
+          "count": 1,
+          "ms": 0.6000000089406967,
+          "max": 0.6000000089406967
+        },
+        "open1:update": {
+          "count": 360,
+          "ms": 41.50000014901161,
+          "max": 0.5
+        },
+        "open1:render": {
+          "count": 720,
+          "ms": 473.2999999374151,
+          "max": 2.5
+        },
+        "close1:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close1:update": {
+          "count": 139,
+          "ms": 16.99999998509884,
+          "max": 0.7000000029802322
+        },
+        "close1:render": {
+          "count": 278,
+          "ms": 202.00000001490116,
+          "max": 1.6000000089406967
+        }
+      },
+      "memory": {
+        "start": {
+          "attributes": 23,
+          "attributesSize": 310404,
+          "geometries": 9,
+          "indexAttributes": 8,
+          "indexAttributesSize": 204408,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 19,
+          "programsSize": 200731,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 25,
+          "texturesSize": 149928703,
+          "uniformBuffers": 88,
+          "uniformBuffersSize": 19824,
+          "total": 150664070
+        },
+        "scroll0": {
+          "attributes": 50,
+          "attributesSize": 691460,
+          "geometries": 18,
+          "indexAttributes": 17,
+          "indexAttributesSize": 440568,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 23,
+          "programsSize": 271182,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 61,
+          "texturesSize": 212478364,
+          "uniformBuffers": 229,
+          "uniformBuffersSize": 57792,
+          "total": 213939366
+        },
+        "scroll1": {
+          "attributes": 50,
+          "attributesSize": 691460,
+          "geometries": 18,
+          "indexAttributes": 17,
+          "indexAttributesSize": 440568,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 23,
+          "programsSize": 271182,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 61,
+          "texturesSize": 212478364,
+          "uniformBuffers": 231,
+          "uniformBuffersSize": 57952,
+          "total": 213939526
+        },
+        "open0": {
+          "attributes": 51,
+          "attributesSize": 691508,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 440592,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 25,
+          "programsSize": 274652,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 62,
+          "texturesSize": 218069371,
+          "uniformBuffers": 233,
+          "uniformBuffersSize": 58160,
+          "total": 219534283
+        },
+        "open1": {
+          "attributes": 51,
+          "attributesSize": 691508,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 440592,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 25,
+          "programsSize": 274652,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 62,
+          "texturesSize": 218069371,
+          "uniformBuffers": 233,
+          "uniformBuffersSize": 58160,
+          "total": 219534283
+        },
+        "end": {
+          "attributes": 51,
+          "attributesSize": 691508,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 440592,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 25,
+          "programsSize": 274652,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 61,
+          "texturesSize": 212478364,
+          "uniformBuffers": 233,
+          "uniformBuffersSize": 58160,
+          "total": 213943276
+        }
+      },
+      "longTasks": [],
+      "resources": {
+        "requests": 63,
+        "covers": 52,
+        "bytes": 1279326
+      },
+      "heap": 76972461,
+      "visibility": "visible"
+    },
+    "ios-baseline": {
+      "flags": {},
+      "backend": "Lj",
+      "woodNodes": false,
+      "readyAt": 2584,
+      "viewport": [
+        402,
+        714,
+        3
+      ],
+      "canvas": [
+        804,
+        1428
+      ],
+      "phases": {
+        "idle": {
+          "frames": 60,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 157,
+          "mean": 25.56687898089172,
+          "p95": 97,
+          "max": 134,
+          "over50": 15,
+          "over100": 4,
+          "renders": 155,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "scroll1": {
+          "frames": 167,
+          "mean": 23.964071856287426,
+          "p95": 99,
+          "max": 102,
+          "over50": 13,
+          "over100": 3,
+          "renders": 167,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "open0": {
+          "frames": 169,
+          "mean": 17.75147928994083,
+          "p95": 18,
+          "max": 187,
+          "over50": 1,
+          "over100": 1,
+          "renders": 169,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 18,
+          "max": 19,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "open1": {
+          "frames": 174,
+          "mean": 17.24137931034483,
+          "p95": 18,
+          "max": 117,
+          "over50": 1,
+          "over100": 1,
+          "renders": 174,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 19,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "idleEnd": {
+          "frames": 48,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 11,
+          "drawCalls": 128,
+          "triangles": 88343
+        }
+      },
+      "cpu": {
+        "scroll0:update": {
+          "count": 155,
+          "ms": 27.000000000001364,
+          "max": 2
+        },
+        "scroll0:render": {
+          "count": 310,
+          "ms": 650.9999999999886,
+          "max": 19
+        },
+        "scroll0:activate": {
+          "count": 47,
+          "ms": 24.000000000001364,
+          "max": 1.0000000000009095
+        },
+        "scroll0:deactivate": {
+          "count": 47,
+          "ms": 3,
+          "max": 1
+        },
+        "scroll1:update": {
+          "count": 167,
+          "ms": 16.00000000000273,
+          "max": 1.000000000001819
+        },
+        "scroll1:render": {
+          "count": 334,
+          "ms": 575.9999999999818,
+          "max": 19.00000000000182
+        },
+        "scroll1:activate": {
+          "count": 47,
+          "ms": 22.99999999999909,
+          "max": 1.000000000001819
+        },
+        "scroll1:deactivate": {
+          "count": 47,
+          "ms": 3.999999999998181,
+          "max": 1
+        },
+        "settle:update": {
+          "count": 2,
+          "ms": 0,
+          "max": 0
+        },
+        "settle:render": {
+          "count": 4,
+          "ms": 3.000000000005457,
+          "max": 1.000000000001819
+        },
+        "open0:open": {
+          "count": 1,
+          "ms": 0.999999999998181,
+          "max": 0.999999999998181
+        },
+        "open0:update": {
+          "count": 169,
+          "ms": 45.999999999989086,
+          "max": 4
+        },
+        "open0:render": {
+          "count": 338,
+          "ms": 466.00000000001637,
+          "max": 161
+        },
+        "close0:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close0:update": {
+          "count": 108,
+          "ms": 25.00000000000182,
+          "max": 2
+        },
+        "close0:render": {
+          "count": 216,
+          "ms": 164,
+          "max": 5
+        },
+        "open1:open": {
+          "count": 1,
+          "ms": 3,
+          "max": 3
+        },
+        "open1:update": {
+          "count": 174,
+          "ms": 24.000000000003638,
+          "max": 1.000000000003638
+        },
+        "open1:render": {
+          "count": 348,
+          "ms": 366.9999999999927,
+          "max": 101
+        },
+        "close1:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close1:update": {
+          "count": 108,
+          "ms": 15.999999999996362,
+          "max": 1
+        },
+        "close1:render": {
+          "count": 216,
+          "ms": 148.9999999999709,
+          "max": 4.999999999996362
+        },
+        "idleEnd:update": {
+          "count": 11,
+          "ms": 1,
+          "max": 1
+        },
+        "idleEnd:render": {
+          "count": 22,
+          "ms": 14.999999999996362,
+          "max": 2.000000000003638
+        }
+      },
+      "memory": {
+        "start": {
+          "attributes": 19,
+          "attributesSize": 250212,
+          "geometries": 8,
+          "indexAttributes": 7,
+          "indexAttributesSize": 87924,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 20,
+          "texturesSize": 118620503,
+          "uniformBuffers": 55,
+          "uniformBuffersSize": 13728,
+          "total": 119120726
+        },
+        "scroll0": {
+          "attributes": 49,
+          "attributesSize": 687972,
+          "geometries": 18,
+          "indexAttributes": 17,
+          "indexAttributesSize": 230724,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 24,
+          "texturesSize": 140984531,
+          "uniformBuffers": 179,
+          "uniformBuffersSize": 44544,
+          "total": 142096130
+        },
+        "scroll1": {
+          "attributes": 49,
+          "attributesSize": 687972,
+          "geometries": 18,
+          "indexAttributes": 17,
+          "indexAttributesSize": 230724,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 24,
+          "texturesSize": 140984531,
+          "uniformBuffers": 259,
+          "uniformBuffersSize": 61760,
+          "total": 142113346
+        },
+        "open0": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216139,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 28,
+          "texturesSize": 158806128,
+          "uniformBuffers": 264,
+          "uniformBuffersSize": 63120,
+          "total": 160038831
+        },
+        "open1": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216139,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 28,
+          "texturesSize": 158806128,
+          "uniformBuffers": 265,
+          "uniformBuffersSize": 63392,
+          "total": 160039103
+        },
+        "end": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 176868,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 27,
+          "texturesSize": 153215121,
+          "uniformBuffers": 264,
+          "uniformBuffersSize": 62752,
+          "total": 154408185
+        }
+      },
+      "longTasks": [],
+      "resources": {
+        "requests": 85,
+        "covers": 74,
+        "bytes": 1393104
+      },
+      "visibility": "visible"
+    },
+    "ios-cache-no-upgrade": {
+      "flags": {
+        "webgl": true,
+        "noSelectedUpgrade": true
+      },
+      "backend": "Lj",
+      "woodNodes": false,
+      "readyAt": 1303,
+      "viewport": [
+        402,
+        714,
+        3
+      ],
+      "canvas": [
+        804,
+        1428
+      ],
+      "phases": {
+        "idle": {
+          "frames": 61,
+          "mean": 16.60655737704918,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 213,
+          "mean": 18.854460093896712,
+          "p95": 27,
+          "max": 65,
+          "over50": 3,
+          "over100": 0,
+          "renders": 211,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "scroll1": {
+          "frames": 235,
+          "mean": 17.02127659574468,
+          "p95": 19,
+          "max": 23,
+          "over50": 0,
+          "over100": 0,
+          "renders": 235,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "open0": {
+          "frames": 171,
+          "mean": 17.54385964912281,
+          "p95": 17,
+          "max": 158,
+          "over50": 1,
+          "over100": 1,
+          "renders": 171,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 24,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "open1": {
+          "frames": 174,
+          "mean": 17.24137931034483,
+          "p95": 17,
+          "max": 117,
+          "over50": 1,
+          "over100": 1,
+          "renders": 174,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 18,
+          "max": 27,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "idleEnd": {
+          "frames": 48,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 11,
+          "drawCalls": 128,
+          "triangles": 88343
+        }
+      },
+      "cpu": {
+        "scroll0:update": {
+          "count": 211,
+          "ms": 39.99999999999818,
+          "max": 4
+        },
+        "scroll0:render": {
+          "count": 422,
+          "ms": 632.0000000000141,
+          "max": 18.999999999999545
+        },
+        "scroll0:activate": {
+          "count": 47,
+          "ms": 14.99999999999909,
+          "max": 2
+        },
+        "scroll0:deactivate": {
+          "count": 47,
+          "ms": 1,
+          "max": 1
+        },
+        "scroll1:update": {
+          "count": 235,
+          "ms": 23,
+          "max": 1.0000000000009095
+        },
+        "scroll1:render": {
+          "count": 470,
+          "ms": 561.0000000000027,
+          "max": 9
+        },
+        "scroll1:activate": {
+          "count": 47,
+          "ms": 0,
+          "max": 0
+        },
+        "scroll1:deactivate": {
+          "count": 47,
+          "ms": 4.999999999998181,
+          "max": 1
+        },
+        "settle:update": {
+          "count": 2,
+          "ms": 0,
+          "max": 0
+        },
+        "settle:render": {
+          "count": 4,
+          "ms": 2,
+          "max": 1
+        },
+        "open0:open": {
+          "count": 1,
+          "ms": 1,
+          "max": 1
+        },
+        "open0:update": {
+          "count": 171,
+          "ms": 11.999999999996362,
+          "max": 1.000000000001819
+        },
+        "open0:render": {
+          "count": 342,
+          "ms": 402.99999999998,
+          "max": 139
+        },
+        "close0:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close0:update": {
+          "count": 108,
+          "ms": 15.999999999998181,
+          "max": 1.000000000001819
+        },
+        "close0:render": {
+          "count": 216,
+          "ms": 164.9999999999909,
+          "max": 10
+        },
+        "open1:open": {
+          "count": 1,
+          "ms": 1,
+          "max": 1
+        },
+        "open1:update": {
+          "count": 174,
+          "ms": 20.999999999990905,
+          "max": 1.000000000001819
+        },
+        "open1:render": {
+          "count": 348,
+          "ms": 324.0000000000673,
+          "max": 104
+        },
+        "close1:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close1:update": {
+          "count": 108,
+          "ms": 14.999999999985448,
+          "max": 2
+        },
+        "close1:render": {
+          "count": 216,
+          "ms": 139.00000000002183,
+          "max": 4
+        },
+        "idleEnd:update": {
+          "count": 11,
+          "ms": 1,
+          "max": 1
+        },
+        "idleEnd:render": {
+          "count": 22,
+          "ms": 14.000000000007276,
+          "max": 2
+        }
+      },
+      "memory": {
+        "start": {
+          "attributes": 19,
+          "attributesSize": 250212,
+          "geometries": 8,
+          "indexAttributes": 7,
+          "indexAttributesSize": 87924,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 20,
+          "texturesSize": 93460973,
+          "uniformBuffers": 55,
+          "uniformBuffersSize": 13728,
+          "total": 93961196
+        },
+        "scroll0": {
+          "attributes": 49,
+          "attributesSize": 687972,
+          "geometries": 18,
+          "indexAttributes": 17,
+          "indexAttributesSize": 230724,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 38,
+          "texturesSize": 118620509,
+          "uniformBuffers": 157,
+          "uniformBuffersSize": 43168,
+          "total": 119730732
+        },
+        "scroll1": {
+          "attributes": 49,
+          "attributesSize": 687972,
+          "geometries": 18,
+          "indexAttributes": 17,
+          "indexAttributesSize": 230724,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 38,
+          "texturesSize": 118620509,
+          "uniformBuffers": 157,
+          "uniformBuffersSize": 43168,
+          "total": 119730732
+        },
+        "open0": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216139,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 137656217
+        },
+        "open1": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216139,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 163,
+          "uniformBuffersSize": 44800,
+          "total": 137656489
+        },
+        "end": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 176868,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 41,
+          "texturesSize": 130851099,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44160,
+          "total": 132025571
+        }
+      },
+      "longTasks": [],
+      "resources": {
+        "requests": 41,
+        "covers": 30,
+        "bytes": 1386986
+      },
+      "visibility": "visible"
+    },
+    "ios-cache": {
+      "flags": {},
+      "backend": "Lj",
+      "woodNodes": false,
+      "readyAt": 1386,
+      "viewport": [
+        402,
+        714,
+        3
+      ],
+      "canvas": [
+        804,
+        1428
+      ],
+      "phases": {
+        "idle": {
+          "frames": 60,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 210,
+          "mean": 19.204761904761906,
+          "p95": 27,
+          "max": 60,
+          "over50": 5,
+          "over100": 0,
+          "renders": 207,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "scroll1": {
+          "frames": 232,
+          "mean": 17.24137931034483,
+          "p95": 21,
+          "max": 25,
+          "over50": 0,
+          "over100": 0,
+          "renders": 232,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "open0": {
+          "frames": 167,
+          "mean": 17.964071856287426,
+          "p95": 18,
+          "max": 164,
+          "over50": 2,
+          "over100": 1,
+          "renders": 167,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 18,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "open1": {
+          "frames": 172,
+          "mean": 17.441860465116278,
+          "p95": 17,
+          "max": 115,
+          "over50": 2,
+          "over100": 1,
+          "renders": 172,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 108,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "idleEnd": {
+          "frames": 47,
+          "mean": 17.02127659574468,
+          "p95": 18,
+          "max": 29,
+          "over50": 0,
+          "over100": 0,
+          "renders": 10,
+          "drawCalls": 128,
+          "triangles": 88343
+        }
+      },
+      "cpu": {
+        "scroll0:update": {
+          "count": 207,
+          "ms": 40,
+          "max": 8
+        },
+        "scroll0:render": {
+          "count": 414,
+          "ms": 593.0000000000173,
+          "max": 9
+        },
+        "scroll0:activate": {
+          "count": 47,
+          "ms": 15.000000000000455,
+          "max": 1.0000000000004547
+        },
+        "scroll0:deactivate": {
+          "count": 47,
+          "ms": 1.999999999998181,
+          "max": 0.9999999999990905
+        },
+        "scroll1:update": {
+          "count": 232,
+          "ms": 34.00000000000273,
+          "max": 1.000000000001819
+        },
+        "scroll1:render": {
+          "count": 464,
+          "ms": 485.00000000001637,
+          "max": 9.00000000000091
+        },
+        "scroll1:activate": {
+          "count": 47,
+          "ms": 0,
+          "max": 0
+        },
+        "scroll1:deactivate": {
+          "count": 47,
+          "ms": 1,
+          "max": 1
+        },
+        "settle:update": {
+          "count": 2,
+          "ms": 0,
+          "max": 0
+        },
+        "settle:render": {
+          "count": 4,
+          "ms": 3.000000000005457,
+          "max": 1.000000000001819
+        },
+        "open0:open": {
+          "count": 1,
+          "ms": 0.999999999998181,
+          "max": 0.999999999998181
+        },
+        "open0:update": {
+          "count": 167,
+          "ms": 31,
+          "max": 1.000000000001819
+        },
+        "open0:render": {
+          "count": 334,
+          "ms": 377.99999999995634,
+          "max": 145
+        },
+        "close0:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close0:update": {
+          "count": 108,
+          "ms": 20.99999999999818,
+          "max": 1.000000000001819
+        },
+        "close0:render": {
+          "count": 216,
+          "ms": 139.99999999997635,
+          "max": 2.000000000001819
+        },
+        "open1:open": {
+          "count": 1,
+          "ms": 1,
+          "max": 1
+        },
+        "open1:update": {
+          "count": 172,
+          "ms": 22.000000000007276,
+          "max": 1.000000000003638
+        },
+        "open1:render": {
+          "count": 344,
+          "ms": 333.99999999999454,
+          "max": 103
+        },
+        "close1:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close1:update": {
+          "count": 108,
+          "ms": 13.000000000003638,
+          "max": 1.000000000003638
+        },
+        "close1:render": {
+          "count": 216,
+          "ms": 141.99999999995998,
+          "max": 2.000000000003638
+        },
+        "idleEnd:update": {
+          "count": 10,
+          "ms": 0,
+          "max": 0
+        },
+        "idleEnd:render": {
+          "count": 20,
+          "ms": 14.000000000003638,
+          "max": 1.000000000003638
+        }
+      },
+      "memory": {
+        "start": {
+          "attributes": 19,
+          "attributesSize": 250212,
+          "geometries": 8,
+          "indexAttributes": 7,
+          "indexAttributesSize": 87924,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 20,
+          "texturesSize": 93460973,
+          "uniformBuffers": 55,
+          "uniformBuffersSize": 13728,
+          "total": 93961196
+        },
+        "scroll0": {
+          "attributes": 49,
+          "attributesSize": 687972,
+          "geometries": 18,
+          "indexAttributes": 17,
+          "indexAttributesSize": 230724,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 38,
+          "texturesSize": 118620509,
+          "uniformBuffers": 157,
+          "uniformBuffersSize": 43168,
+          "total": 119730732
+        },
+        "scroll1": {
+          "attributes": 49,
+          "attributesSize": 687972,
+          "geometries": 18,
+          "indexAttributes": 17,
+          "indexAttributesSize": 230724,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 38,
+          "texturesSize": 118620509,
+          "uniformBuffers": 157,
+          "uniformBuffersSize": 43168,
+          "total": 119730732
+        },
+        "open0": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216139,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 43,
+          "texturesSize": 142033113,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 143247224
+        },
+        "open1": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216139,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 43,
+          "texturesSize": 142033113,
+          "uniformBuffers": 163,
+          "uniformBuffersSize": 44800,
+          "total": 143247496
+        },
+        "end": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 176868,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 41,
+          "texturesSize": 130851099,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44160,
+          "total": 132025571
+        }
+      },
+      "longTasks": [],
+      "resources": {
+        "requests": 41,
+        "covers": 30,
+        "bytes": 1386986
+      },
+      "visibility": "visible"
+    },
+    "ios-final-early-no-spotify": {
+      "flags": {},
+      "backend": "Lj",
+      "woodNodes": false,
+      "readyAt": 1346,
+      "viewport": [
+        402,
+        714,
+        3
+      ],
+      "canvas": [
+        804,
+        1428
+      ],
+      "phases": {
+        "idle": {
+          "frames": 1,
+          "mean": 17,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 205,
+          "mean": 19.53170731707317,
+          "p95": 33,
+          "max": 87,
+          "over50": 5,
+          "over100": 0,
+          "renders": 203,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "scroll1": {
+          "frames": 236,
+          "mean": 16.949152542372882,
+          "p95": 21,
+          "max": 24,
+          "over50": 0,
+          "over100": 0,
+          "renders": 236,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "open0": {
+          "frames": 174,
+          "mean": 17.270114942528735,
+          "p95": 18,
+          "max": 69,
+          "over50": 2,
+          "over100": 0,
+          "renders": 174,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.62037037037037,
+          "p95": 18,
+          "max": 19,
+          "over50": 0,
+          "over100": 0,
+          "renders": 70,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "open1": {
+          "frames": 174,
+          "mean": 17.24712643678161,
+          "p95": 20,
+          "max": 67,
+          "over50": 2,
+          "over100": 0,
+          "renders": 174,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.65740740740741,
+          "p95": 20,
+          "max": 25,
+          "over50": 0,
+          "over100": 0,
+          "renders": 69,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "idleEnd": {
+          "frames": 48,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        }
+      },
+      "cpu": {
+        "scroll0:update": {
+          "count": 203,
+          "ms": 48.999999999997726,
+          "max": 3.9999999999990905
+        },
+        "scroll0:render": {
+          "count": 406,
+          "ms": 594.9999999999984,
+          "max": 14
+        },
+        "scroll0:activate": {
+          "count": 47,
+          "ms": 13,
+          "max": 1.0000000000004547
+        },
+        "scroll0:deactivate": {
+          "count": 47,
+          "ms": 0.9999999999995453,
+          "max": 0.9999999999995453
+        },
+        "scroll1:update": {
+          "count": 236,
+          "ms": 26.00000000000091,
+          "max": 1.0000000000009095
+        },
+        "scroll1:render": {
+          "count": 472,
+          "ms": 519.9999999999818,
+          "max": 3
+        },
+        "scroll1:activate": {
+          "count": 47,
+          "ms": 0,
+          "max": 0
+        },
+        "scroll1:deactivate": {
+          "count": 47,
+          "ms": 1,
+          "max": 1
+        },
+        "settle:update": {
+          "count": 2,
+          "ms": 0,
+          "max": 0
+        },
+        "settle:render": {
+          "count": 4,
+          "ms": 4,
+          "max": 1
+        },
+        "open0:open": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "open0:update": {
+          "count": 174,
+          "ms": 21,
+          "max": 1.000000000001819
+        },
+        "open0:render": {
+          "count": 348,
+          "ms": 303.00000000001273,
+          "max": 14.000000000001819
+        },
+        "close0:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close0:update": {
+          "count": 70,
+          "ms": 5.999999999998181,
+          "max": 1
+        },
+        "close0:render": {
+          "count": 140,
+          "ms": 80.0000000000091,
+          "max": 2
+        },
+        "open1:open": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "open1:update": {
+          "count": 174,
+          "ms": 13.999999999998181,
+          "max": 1
+        },
+        "open1:render": {
+          "count": 348,
+          "ms": 264.00000000001455,
+          "max": 12
+        },
+        "close1:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close1:update": {
+          "count": 69,
+          "ms": 9.000000000010914,
+          "max": 1.000000000003638
+        },
+        "close1:render": {
+          "count": 138,
+          "ms": 96.99999999999636,
+          "max": 2.000000000003638
+        }
+      },
+      "memory": {
+        "start": {
+          "attributes": 19,
+          "attributesSize": 250212,
+          "geometries": 8,
+          "indexAttributes": 7,
+          "indexAttributesSize": 87924,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 20,
+          "texturesSize": 93460973,
+          "uniformBuffers": 55,
+          "uniformBuffersSize": 13728,
+          "total": 93961196
+        },
+        "scroll0": {
+          "attributes": 52,
+          "attributesSize": 718820,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 234564,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 212614,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 160,
+          "uniformBuffersSize": 44320,
+          "total": 137652424
+        },
+        "scroll1": {
+          "attributes": 52,
+          "attributesSize": 718820,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 234564,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 212614,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 160,
+          "uniformBuffersSize": 44320,
+          "total": 137652424
+        },
+        "open0": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216173,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 43,
+          "texturesSize": 142033113,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 143247258
+        },
+        "open1": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216173,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 43,
+          "texturesSize": 142033113,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 143247258
+        },
+        "end": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216173,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 137656251
+        }
+      },
+      "longTasks": [],
+      "resources": {
+        "requests": 41,
+        "covers": 30,
+        "bytes": 1218
+      },
+      "visibility": "visible"
+    },
+    "ios-final-early-repeat": {
+      "flags": {},
+      "backend": "Lj",
+      "woodNodes": false,
+      "readyAt": 1305,
+      "viewport": [
+        402,
+        714,
+        3
+      ],
+      "canvas": [
+        804,
+        1428
+      ],
+      "phases": {
+        "idle": {
+          "frames": 0,
+          "mean": null,
+          "max": null,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 216,
+          "mean": 18.61574074074074,
+          "p95": 36,
+          "max": 71,
+          "over50": 5,
+          "over100": 0,
+          "renders": 214,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "scroll1": {
+          "frames": 239,
+          "mean": 16.799163179916317,
+          "p95": 20,
+          "max": 24,
+          "over50": 0,
+          "over100": 0,
+          "renders": 239,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "open0": {
+          "frames": 174,
+          "mean": 17.264367816091955,
+          "p95": 18,
+          "max": 67,
+          "over50": 2,
+          "over100": 0,
+          "renders": 174,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.62962962962963,
+          "p95": 18,
+          "max": 18,
+          "over50": 0,
+          "over100": 0,
+          "renders": 69,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "open1": {
+          "frames": 175,
+          "mean": 17.165714285714287,
+          "p95": 20,
+          "max": 67,
+          "over50": 2,
+          "over100": 0,
+          "renders": 175,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.62962962962963,
+          "p95": 18,
+          "max": 20,
+          "over50": 0,
+          "over100": 0,
+          "renders": 69,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "idleEnd": {
+          "frames": 48,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 22,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        }
+      },
+      "cpu": {
+        "scroll0:update": {
+          "count": 214,
+          "ms": 38.0000000000025,
+          "max": 2
+        },
+        "scroll0:render": {
+          "count": 428,
+          "ms": 550.9999999999875,
+          "max": 8
+        },
+        "scroll0:activate": {
+          "count": 47,
+          "ms": 11.000000000000227,
+          "max": 1.0000000000004547
+        },
+        "scroll0:deactivate": {
+          "count": 47,
+          "ms": 0,
+          "max": 0
+        },
+        "scroll1:update": {
+          "count": 239,
+          "ms": 32,
+          "max": 1.000000000001819
+        },
+        "scroll1:render": {
+          "count": 478,
+          "ms": 485.00000000001455,
+          "max": 5
+        },
+        "scroll1:activate": {
+          "count": 47,
+          "ms": 0,
+          "max": 0
+        },
+        "scroll1:deactivate": {
+          "count": 47,
+          "ms": 1.0000000000009095,
+          "max": 1.0000000000009095
+        },
+        "settle:update": {
+          "count": 2,
+          "ms": 0,
+          "max": 0
+        },
+        "settle:render": {
+          "count": 4,
+          "ms": 3,
+          "max": 1
+        },
+        "open0:open": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "open0:update": {
+          "count": 174,
+          "ms": 18.99999999999818,
+          "max": 1.000000000001819
+        },
+        "open0:render": {
+          "count": 348,
+          "ms": 269.9999999999982,
+          "max": 14.999999999998181
+        },
+        "close0:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close0:update": {
+          "count": 69,
+          "ms": 7.000000000003638,
+          "max": 1.000000000001819
+        },
+        "close0:render": {
+          "count": 138,
+          "ms": 98.99999999998727,
+          "max": 2
+        },
+        "open1:open": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "open1:update": {
+          "count": 175,
+          "ms": 12.000000000001819,
+          "max": 1.000000000001819
+        },
+        "open1:render": {
+          "count": 350,
+          "ms": 264.99999999998363,
+          "max": 12
+        },
+        "close1:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close1:update": {
+          "count": 69,
+          "ms": 7.000000000007276,
+          "max": 1.000000000003638
+        },
+        "close1:render": {
+          "count": 138,
+          "ms": 79.00000000001091,
+          "max": 2
+        }
+      },
+      "memory": {
+        "start": {
+          "attributes": 19,
+          "attributesSize": 250212,
+          "geometries": 8,
+          "indexAttributes": 7,
+          "indexAttributesSize": 87924,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 20,
+          "texturesSize": 93460973,
+          "uniformBuffers": 55,
+          "uniformBuffersSize": 13728,
+          "total": 93961196
+        },
+        "scroll0": {
+          "attributes": 52,
+          "attributesSize": 718820,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 234564,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 212614,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 160,
+          "uniformBuffersSize": 44320,
+          "total": 137652424
+        },
+        "scroll1": {
+          "attributes": 52,
+          "attributesSize": 718820,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 234564,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 212614,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 160,
+          "uniformBuffersSize": 44320,
+          "total": 137652424
+        },
+        "open0": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216173,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 43,
+          "texturesSize": 142033113,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 143247258
+        },
+        "open1": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216173,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 43,
+          "texturesSize": 142033113,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 143247258
+        },
+        "end": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216173,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 137656251
+        }
+      },
+      "longTasks": [],
+      "resources": {
+        "requests": 41,
+        "covers": 30,
+        "bytes": 1218
+      },
+      "visibility": "visible"
+    },
+    "ios-final-early": {
+      "flags": {},
+      "backend": "Lj",
+      "woodNodes": false,
+      "readyAt": 1571,
+      "viewport": [
+        402,
+        714,
+        3
+      ],
+      "canvas": [
+        804,
+        1428
+      ],
+      "phases": {
+        "idle": {
+          "frames": 1,
+          "mean": 17,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 202,
+          "mean": 19.836633663366335,
+          "p95": 46,
+          "max": 78,
+          "over50": 8,
+          "over100": 0,
+          "renders": 200,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "scroll1": {
+          "frames": 230,
+          "mean": 17.430434782608696,
+          "p95": 22,
+          "max": 25,
+          "over50": 0,
+          "over100": 0,
+          "renders": 230,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "open0": {
+          "frames": 156,
+          "mean": 19.23076923076923,
+          "p95": 17,
+          "max": 362,
+          "over50": 2,
+          "over100": 1,
+          "renders": 156,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 18,
+          "over50": 0,
+          "over100": 0,
+          "renders": 69,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "open1": {
+          "frames": 174,
+          "mean": 17.24137931034483,
+          "p95": 18,
+          "max": 71,
+          "over50": 2,
+          "over100": 0,
+          "renders": 174,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 18,
+          "over50": 0,
+          "over100": 0,
+          "renders": 69,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "idleEnd": {
+          "frames": 48,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        }
+      },
+      "cpu": {
+        "scroll0:update": {
+          "count": 200,
+          "ms": 43.99999999999932,
+          "max": 6
+        },
+        "scroll0:render": {
+          "count": 400,
+          "ms": 590.0000000000048,
+          "max": 31.000000000000455
+        },
+        "scroll0:activate": {
+          "count": 47,
+          "ms": 13.999999999999773,
+          "max": 1.0000000000004547
+        },
+        "scroll0:deactivate": {
+          "count": 47,
+          "ms": 3.0000000000009095,
+          "max": 1.0000000000009095
+        },
+        "scroll1:update": {
+          "count": 230,
+          "ms": 27.99999999999909,
+          "max": 1.000000000001819
+        },
+        "scroll1:render": {
+          "count": 460,
+          "ms": 459.9999999999909,
+          "max": 7
+        },
+        "scroll1:activate": {
+          "count": 47,
+          "ms": 0,
+          "max": 0
+        },
+        "scroll1:deactivate": {
+          "count": 47,
+          "ms": 0,
+          "max": 0
+        },
+        "settle:update": {
+          "count": 2,
+          "ms": 0,
+          "max": 0
+        },
+        "settle:render": {
+          "count": 4,
+          "ms": 2.999999999994543,
+          "max": 0.999999999998181
+        },
+        "open0:open": {
+          "count": 1,
+          "ms": 1,
+          "max": 1
+        },
+        "open0:update": {
+          "count": 156,
+          "ms": 36.99999999999636,
+          "max": 1.000000000001819
+        },
+        "open0:render": {
+          "count": 312,
+          "ms": 303.00000000001455,
+          "max": 15
+        },
+        "close0:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close0:update": {
+          "count": 69,
+          "ms": 15.999999999998181,
+          "max": 2
+        },
+        "close0:render": {
+          "count": 138,
+          "ms": 129.0000000000091,
+          "max": 3
+        },
+        "open1:open": {
+          "count": 1,
+          "ms": 1,
+          "max": 1
+        },
+        "open1:update": {
+          "count": 174,
+          "ms": 17.999999999990905,
+          "max": 1.000000000001819
+        },
+        "open1:render": {
+          "count": 348,
+          "ms": 269.99999999997635,
+          "max": 11
+        },
+        "close1:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close1:update": {
+          "count": 69,
+          "ms": 11.999999999989086,
+          "max": 1.000000000003638
+        },
+        "close1:render": {
+          "count": 138,
+          "ms": 106,
+          "max": 6
+        }
+      },
+      "memory": {
+        "start": {
+          "attributes": 19,
+          "attributesSize": 250212,
+          "geometries": 8,
+          "indexAttributes": 7,
+          "indexAttributesSize": 87924,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 20,
+          "texturesSize": 93460973,
+          "uniformBuffers": 55,
+          "uniformBuffersSize": 13728,
+          "total": 93961196
+        },
+        "scroll0": {
+          "attributes": 52,
+          "attributesSize": 718820,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 234564,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 212614,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 160,
+          "uniformBuffersSize": 44320,
+          "total": 137652424
+        },
+        "scroll1": {
+          "attributes": 52,
+          "attributesSize": 718820,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 234564,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 212614,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 160,
+          "uniformBuffersSize": 44320,
+          "total": 137652424
+        },
+        "open0": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216173,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 43,
+          "texturesSize": 142033113,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 143247258
+        },
+        "open1": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216173,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 43,
+          "texturesSize": 142033113,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 143247258
+        },
+        "end": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216173,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 137656251
+        }
+      },
+      "longTasks": [],
+      "resources": {
+        "requests": 41,
+        "covers": 30,
+        "bytes": 1269723
+      },
+      "visibility": "visible"
+    },
+    "ios-final-stress": {
+      "viewport": [
+        402,
+        714,
+        3
+      ],
+      "samples": [
+        {
+          "memory": {
+            "attributes": 89,
+            "attributesSize": 1260548,
+            "geometries": 31,
+            "indexAttributes": 30,
+            "indexAttributesSize": 405924,
+            "indirectStorageAttributes": 0,
+            "indirectStorageAttributesSize": 0,
+            "programs": 24,
+            "programsSize": 212614,
+            "readbackBuffers": 0,
+            "readbackBuffersSize": 0,
+            "renderTargets": 3,
+            "storageAttributes": 0,
+            "storageAttributesSize": 0,
+            "textures": 52,
+            "texturesSize": 150419626,
+            "uniformBuffers": 338,
+            "uniformBuffersSize": 89600,
+            "total": 152388312
+          },
+          "active": 10,
+          "cached": 24,
+          "cacheBytes": 60692528.000000015,
+          "selected": false,
+          "slots": 52
+        },
+        {
+          "memory": {
+            "attributes": 89,
+            "attributesSize": 1260548,
+            "geometries": 31,
+            "indexAttributes": 30,
+            "indexAttributesSize": 405924,
+            "indirectStorageAttributes": 0,
+            "indirectStorageAttributesSize": 0,
+            "programs": 24,
+            "programsSize": 212614,
+            "readbackBuffers": 0,
+            "readbackBuffersSize": 0,
+            "renderTargets": 3,
+            "storageAttributes": 0,
+            "storageAttributesSize": 0,
+            "textures": 52,
+            "texturesSize": 150419626,
+            "uniformBuffers": 440,
+            "uniformBuffersSize": 111904,
+            "total": 152410616
+          },
+          "active": 10,
+          "cached": 24,
+          "cacheBytes": 60692528.000000015,
+          "selected": false,
+          "slots": 52
+        },
+        {
+          "memory": {
+            "attributes": 89,
+            "attributesSize": 1260548,
+            "geometries": 31,
+            "indexAttributes": 30,
+            "indexAttributesSize": 405924,
+            "indirectStorageAttributes": 0,
+            "indirectStorageAttributesSize": 0,
+            "programs": 24,
+            "programsSize": 212614,
+            "readbackBuffers": 0,
+            "readbackBuffersSize": 0,
+            "renderTargets": 3,
+            "storageAttributes": 0,
+            "storageAttributesSize": 0,
+            "textures": 52,
+            "texturesSize": 150419626,
+            "uniformBuffers": 542,
+            "uniformBuffersSize": 134208,
+            "total": 152432920
+          },
+          "active": 10,
+          "cached": 24,
+          "cacheBytes": 60692528.000000015,
+          "selected": false,
+          "slots": 52
+        }
+      ],
+      "end": {
+        "memory": {
+          "attributes": 90,
+          "attributesSize": 1260596,
+          "geometries": 32,
+          "indexAttributes": 31,
+          "indexAttributesSize": 405936,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216173,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 52,
+          "texturesSize": 150419626,
+          "uniformBuffers": 544,
+          "uniformBuffersSize": 134416,
+          "total": 152436747
+        },
+        "active": 10,
+        "cached": 24,
+        "cacheBytes": 60692528.000000015,
+        "selected": false,
+        "slots": 52
+      },
+      "phases": {
+        "sweep0": {
+          "frames": 300,
+          "p95": 56,
+          "max": 89,
+          "over50": 25,
+          "over100": 0
+        },
+        "sweep1": {
+          "frames": 350,
+          "p95": 29,
+          "max": 56,
+          "over50": 12,
+          "over100": 0
+        },
+        "sweep2": {
+          "frames": 359,
+          "p95": 26,
+          "max": 63,
+          "over50": 8,
+          "over100": 0
+        },
+        "opens": {
+          "frames": 450,
+          "p95": 19,
+          "max": 68,
+          "over50": 9,
+          "over100": 0
+        }
+      },
+      "opens": [
+        {
+          "openMs": 706.9999999999964,
+          "closeMs": 578
+        },
+        {
+          "openMs": 698,
+          "closeMs": 601
+        },
+        {
+          "openMs": 705,
+          "closeMs": 601
+        },
+        {
+          "openMs": 683,
+          "closeMs": 580
+        },
+        {
+          "openMs": 697,
+          "closeMs": 581
+        }
+      ]
+    },
+    "ios-final": {
+      "flags": {},
+      "backend": "Lj",
+      "woodNodes": false,
+      "readyAt": 1258,
+      "viewport": [
+        402,
+        714,
+        3
+      ],
+      "canvas": [
+        804,
+        1428
+      ],
+      "phases": {
+        "idle": {
+          "frames": 58,
+          "mean": 17.24137931034483,
+          "p95": 18,
+          "max": 62,
+          "over50": 1,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        },
+        "scroll0": {
+          "frames": 213,
+          "mean": 18.854460093896712,
+          "p95": 28,
+          "max": 59,
+          "over50": 3,
+          "over100": 0,
+          "renders": 211,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "scroll1": {
+          "frames": 238,
+          "mean": 16.8781512605042,
+          "p95": 21,
+          "max": 28,
+          "over50": 0,
+          "over100": 0,
+          "renders": 238,
+          "drawCalls": 212,
+          "triangles": 140843
+        },
+        "open0": {
+          "frames": 174,
+          "mean": 17.24137931034483,
+          "p95": 17,
+          "max": 73,
+          "over50": 2,
+          "over100": 0,
+          "renders": 174,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close0": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 69,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "open1": {
+          "frames": 175,
+          "mean": 17.142857142857142,
+          "p95": 17,
+          "max": 62,
+          "over50": 2,
+          "over100": 0,
+          "renders": 175,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "close1": {
+          "frames": 108,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 69,
+          "drawCalls": 132,
+          "triangles": 88985
+        },
+        "idleEnd": {
+          "frames": 48,
+          "mean": 16.666666666666668,
+          "p95": 17,
+          "max": 17,
+          "over50": 0,
+          "over100": 0,
+          "renders": 0,
+          "drawCalls": 0,
+          "triangles": 0
+        }
+      },
+      "cpu": {
+        "scroll0:update": {
+          "count": 211,
+          "ms": 53,
+          "max": 2
+        },
+        "scroll0:render": {
+          "count": 422,
+          "ms": 617.0000000000059,
+          "max": 19
+        },
+        "scroll0:activate": {
+          "count": 47,
+          "ms": 13,
+          "max": 1.0000000000004547
+        },
+        "scroll0:deactivate": {
+          "count": 47,
+          "ms": 1.9999999999990905,
+          "max": 1
+        },
+        "scroll1:update": {
+          "count": 238,
+          "ms": 32,
+          "max": 1.000000000001819
+        },
+        "scroll1:render": {
+          "count": 476,
+          "ms": 472.99999999999545,
+          "max": 3.0000000000009095
+        },
+        "scroll1:activate": {
+          "count": 47,
+          "ms": 0,
+          "max": 0
+        },
+        "scroll1:deactivate": {
+          "count": 47,
+          "ms": 1,
+          "max": 1
+        },
+        "settle:update": {
+          "count": 2,
+          "ms": 0,
+          "max": 0
+        },
+        "settle:render": {
+          "count": 4,
+          "ms": 5,
+          "max": 2
+        },
+        "open0:open": {
+          "count": 1,
+          "ms": 0.999999999998181,
+          "max": 0.999999999998181
+        },
+        "open0:update": {
+          "count": 174,
+          "ms": 18,
+          "max": 1.000000000001819
+        },
+        "open0:render": {
+          "count": 348,
+          "ms": 402.00000000000364,
+          "max": 16
+        },
+        "close0:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close0:update": {
+          "count": 69,
+          "ms": 14.000000000009095,
+          "max": 2.000000000001819
+        },
+        "close0:render": {
+          "count": 138,
+          "ms": 138.9999999999909,
+          "max": 2.000000000001819
+        },
+        "open1:open": {
+          "count": 1,
+          "ms": 1,
+          "max": 1
+        },
+        "open1:update": {
+          "count": 175,
+          "ms": 23.00000000000182,
+          "max": 1.000000000003638
+        },
+        "open1:render": {
+          "count": 350,
+          "ms": 365.00000000000546,
+          "max": 12.000000000001819
+        },
+        "close1:close": {
+          "count": 1,
+          "ms": 0,
+          "max": 0
+        },
+        "close1:update": {
+          "count": 69,
+          "ms": 10.000000000003638,
+          "max": 1.000000000003638
+        },
+        "close1:render": {
+          "count": 138,
+          "ms": 116.99999999998909,
+          "max": 6.000000000003638
+        }
+      },
+      "memory": {
+        "start": {
+          "attributes": 19,
+          "attributesSize": 250212,
+          "geometries": 8,
+          "indexAttributes": 7,
+          "indexAttributesSize": 87924,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 20,
+          "programsSize": 148359,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 20,
+          "texturesSize": 93460973,
+          "uniformBuffers": 55,
+          "uniformBuffersSize": 13728,
+          "total": 93961196
+        },
+        "scroll0": {
+          "attributes": 52,
+          "attributesSize": 718820,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 234564,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 212580,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 160,
+          "uniformBuffersSize": 44320,
+          "total": 137652390
+        },
+        "scroll1": {
+          "attributes": 52,
+          "attributesSize": 718820,
+          "geometries": 19,
+          "indexAttributes": 18,
+          "indexAttributesSize": 234564,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 24,
+          "programsSize": 212580,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 160,
+          "uniformBuffersSize": 44320,
+          "total": 137652390
+        },
+        "open0": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216139,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 43,
+          "texturesSize": 142033113,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 143247224
+        },
+        "open1": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216139,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 43,
+          "texturesSize": 142033113,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 143247224
+        },
+        "end": {
+          "attributes": 53,
+          "attributesSize": 718868,
+          "geometries": 20,
+          "indexAttributes": 19,
+          "indexAttributesSize": 234576,
+          "indirectStorageAttributes": 0,
+          "indirectStorageAttributesSize": 0,
+          "programs": 26,
+          "programsSize": 216139,
+          "readbackBuffers": 0,
+          "readbackBuffersSize": 0,
+          "renderTargets": 3,
+          "storageAttributes": 0,
+          "storageAttributesSize": 0,
+          "textures": 42,
+          "texturesSize": 136442106,
+          "uniformBuffers": 162,
+          "uniformBuffersSize": 44528,
+          "total": 137656217
+        }
+      },
+      "longTasks": [],
+      "resources": {
+        "requests": 41,
+        "covers": 30,
+        "bytes": 1279926
+      },
+      "visibility": "visible"
+    }
+  },
+  "baselinePreviewTimingMs": {
+    "open": 1630.4,
+    "close": 1398.9
+  },
+  "scrollStartFlickerValidation": {
+    "cause": "Safari toolbar ResizeObserver cleared the canvas before paint, then deferred drawing to the next animation callback.",
+    "regressionCommand": "npm test -- src/components/shelf/scene-resize.test.ts",
+    "originalFailingTests": 3,
+    "chromeWebGLBefore": {
+      "backend": "WebGLBackend",
+      "clears": 6,
+      "clearsOutsideAnimationFrame": 6,
+      "events": [
+        {
+          "kind": "clear",
+          "inside": false,
+          "at": 39281.5,
+          "size": [
+            402,
+            760
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39289.5
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39290.89999999106
+        },
+        {
+          "kind": "clear",
+          "inside": false,
+          "at": 39389.5,
+          "size": [
+            402,
+            714
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39397.70000000298
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39398.59999999404
+        },
+        {
+          "kind": "clear",
+          "inside": false,
+          "at": 39489.20000000298,
+          "size": [
+            402,
+            748
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39497.29999999702
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39498.09999999404
+        },
+        {
+          "kind": "clear",
+          "inside": false,
+          "at": 39589.5,
+          "size": [
+            402,
+            714
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39597.29999999702
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39598.20000000298
+        },
+        {
+          "kind": "clear",
+          "inside": false,
+          "at": 39689.70000000298,
+          "size": [
+            402,
+            760
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39697.5
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39698.20000000298
+        },
+        {
+          "kind": "clear",
+          "inside": false,
+          "at": 39789.29999999702,
+          "size": [
+            402,
+            714
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39797.5
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 39798.20000000298
+        }
+      ]
+    },
+    "chromeWebGLAfter": {
+      "backend": "WebGLBackend",
+      "clears": 6,
+      "clearsOutsideAnimationFrame": 0,
+      "events": [
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 70276.20000000298,
+          "size": [
+            402,
+            760
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70278.20000000298
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70279.59999999404
+        },
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 70385.09999999404,
+          "size": [
+            402,
+            714
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70387.09999999404
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70387.70000000298
+        },
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 70484.90000000596,
+          "size": [
+            402,
+            748
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70486.59999999404
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70487.40000000596
+        },
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 70584.90000000596,
+          "size": [
+            402,
+            714
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70586.20000000298
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70587
+        },
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 70684.90000000596,
+          "size": [
+            402,
+            760
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70686.5
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70687.29999999702
+        },
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 70785,
+          "size": [
+            402,
+            714
+          ]
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70786.70000000298
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 70787.40000000596
+        }
+      ]
+    },
+    "limits": "Safari verification uses an automated canvas-height sequence. Native screenshot capture returned blank; no replacement native scroll recording was captured.",
+    "iphoneSafariAfter": {
+      "backend": "WebGLBackend",
+      "clearsWithoutSameTurnDraw": 0,
+      "clears": 6,
+      "clearsOutsideAnimationFrame": 0,
+      "events": [
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 2432,
+          "size": [
+            402,
+            760
+          ],
+          "drawnInSameTurn": true
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2433
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2435
+        },
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 2544,
+          "size": [
+            402,
+            714
+          ],
+          "drawnInSameTurn": true
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2544
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2545
+        },
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 2748,
+          "size": [
+            402,
+            748
+          ],
+          "drawnInSameTurn": true
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2749
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2750
+        },
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 2777,
+          "size": [
+            402,
+            714
+          ],
+          "drawnInSameTurn": true
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2778
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2779
+        },
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 2894,
+          "size": [
+            402,
+            760
+          ],
+          "drawnInSameTurn": true
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2894
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2895
+        },
+        {
+          "kind": "clear",
+          "inside": true,
+          "at": 2994,
+          "size": [
+            402,
+            714
+          ],
+          "drawnInSameTurn": true
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2995
+        },
+        {
+          "kind": "draw",
+          "inside": true,
+          "at": 2996
+        }
+      ],
+      "viewport": [
+        402,
+        714,
+        3
+      ],
+      "ready": true
+    }
+  }
+}
