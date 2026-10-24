@@ -120,7 +120,8 @@ a {
   text-decoration: none;
 }
 
-.button-refresh {
+.button-refresh,
+.button-layout {
   width: 40px;
   min-height: 40px;
 }
@@ -534,6 +535,57 @@ a {
   grid-column: 1 / -1;
   height: 16px;
   margin: 0 calc(-1 * var(--shelf-gap)) 72px;
+}
+
+/* Crate: the collection standing in a crate, flipped through one record at a time */
+
+.crate-view:not(.crate-ready) {
+  visibility: hidden;
+}
+
+.crate {
+  position: relative;
+  height: clamp(320px, calc(100dvh - 290px), 760px);
+  margin-top: 8px;
+  /* Vertical swipes flip records instead of scrolling the page. */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.crate-pointing {
+  cursor: pointer;
+}
+
+.crate-sleeve {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.crate-caption {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: min(440px, 100%);
+  margin: 16px auto 0;
+  text-align: center;
+}
+
+.crate-caption p {
+  display: grid;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.crate-caption-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crate-caption .muted {
+  font-size: 0.8rem;
 }
 
 /* Stage: the selected record at the front, with its details */

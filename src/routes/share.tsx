@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ButtonLabel } from '../components/ButtonLabel'
 import { CollectionView } from '../components/CollectionView'
+import { LayoutToggle } from '../components/LayoutToggle'
+import { useShelfLayout } from '../hooks/useShelfLayout'
 import { readSharedCollection } from '../lib/shared-collection'
 
 export const Route = createFileRoute('/share')({
@@ -20,6 +22,7 @@ export const Route = createFileRoute('/share')({
 function SharedCollectionPage() {
   const collection = Route.useLoaderData()
   const { data } = Route.useSearch()
+  const shelf = useShelfLayout()
   if (!collection) {
     return (
       <main className="sign-in">
@@ -39,10 +42,19 @@ function SharedCollectionPage() {
           <h1>Vinyl Library</h1>
           <p className="muted">{username} · {items.length} {items.length === 1 ? 'record' : 'records'} · Shared collection</p>
         </div>
-        <Link className="button" to="/"><ButtonLabel>Your collection</ButtonLabel></Link>
+        <div className="actions">
+          {items.length > 0 && shelf.available && <LayoutToggle layout={shelf.layout} onToggle={shelf.toggle} />}
+          <Link className="button" to="/"><ButtonLabel>Your collection</ButtonLabel></Link>
+        </div>
       </header>
       <main>
-        <CollectionView key={data} items={items} emptyMessage="There’s no vinyl in this shared collection." />
+        <CollectionView
+          key={data}
+          items={items}
+          emptyMessage="There’s no vinyl in this shared collection."
+          layout={shelf.layout}
+          onUnsupported={shelf.markUnavailable}
+        />
       </main>
     </div>
   )

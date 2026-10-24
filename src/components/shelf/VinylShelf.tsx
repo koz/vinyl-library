@@ -12,20 +12,25 @@ import type { CollectionItem } from '../../lib/collection'
 import { ButtonLabel } from '../ButtonLabel'
 import { SpotifyAlbumPrototype } from '../SpotifyAlbumPrototype'
 import { STAGE_ASPECT, columnsFor } from './layout'
+import { VinylCrate } from './VinylCrate'
 import type { ShelfScene } from './scene'
 
 type Stage = { item: CollectionItem; closing: boolean }
 
+export type ShelfLayout = 'shelves' | 'crate'
+
 /**
- * The collection as records standing on wooden shelves, drawn with WebGPU or WebGL. Calls
- * `onUnsupported` if neither backend is available, so the page can fall back to a plain list.
+ * The collection as records standing on wooden shelves or in a crate, drawn with WebGPU or WebGL.
+ * Calls `onUnsupported` if neither backend is available, so the page can fall back to a plain list.
  */
 export function VinylShelf({
   items,
+  layout = 'shelves',
   onUnsupported,
   onReady,
 }: {
   items: CollectionItem[]
+  layout?: ShelfLayout
   onUnsupported: () => void
   onReady: () => void
 }) {
@@ -90,7 +95,7 @@ export function VinylShelf({
     // Content above the shelf (notices, progress) can move it without a scroll.
     observer.observe(document.body)
     return () => observer.disconnect()
-  }, [scene])
+  }, [scene, layout])
 
   useEffect(() => {
     if (!stage) return
@@ -105,9 +110,9 @@ export function VinylShelf({
     }
   }, [stage !== null])
 
-  function openStage(item: CollectionItem, slot: HTMLElement) {
+  function openStage(item: CollectionItem, returnTo: HTMLElement) {
     if (stage) return
-    returnFocus.current = slot
+    returnFocus.current = returnTo
     scene?.hover(null)
     setStage({ item, closing: false })
   }
@@ -131,27 +136,31 @@ export function VinylShelf({
   return (
     <>
       <canvas ref={canvasRef} className={`shelf-canvas${ready ? '' : ' shelf-canvas-loading'}`} aria-hidden="true" />
-      <div
-        ref={shelfRef}
-        className={`shelf${ready ? ' shelf-ready' : ''}`}
-        aria-busy={!ready}
-        inert={!ready}
-        style={{ '--columns': columns } as CSSProperties}
-      >
-        {rows.map((row, index) => (
-          <Fragment key={index}>
-            {row.map((item) => (
-              <Slot
-                key={item.instanceId}
-                item={item}
-                scene={scene}
-                onOpen={openStage}
-              />
-            ))}
-            <Plank scene={scene} />
-          </Fragment>
-        ))}
-      </div>
+      {layout === 'crate' ? (
+        <VinylCrate items={items} scene={scene} ready={ready} stageOpen={stage !== null} onOpen={openStage} />
+      ) : (
+        <div
+          ref={shelfRef}
+          className={`shelf${ready ? ' shelf-ready' : ''}`}
+          aria-busy={!ready}
+          inert={!ready}
+          style={{ '--columns': columns } as CSSProperties}
+        >
+          {rows.map((row, index) => (
+            <Fragment key={index}>
+              {row.map((item) => (
+                <Slot
+                  key={item.instanceId}
+                  item={item}
+                  scene={scene}
+                  onOpen={openStage}
+                />
+              ))}
+              <Plank scene={scene} />
+            </Fragment>
+          ))}
+        </div>
+      )}
       {stage && (
         <StageView
           stage={stage}
@@ -254,7 +263,7 @@ function StageView({
         ref={artRef}
         className="stage-art"
         type="button"
-        aria-label={`Put ${item.title} back on the shelf`}
+        aria-label={`Put ${item.title} back`}
         onClick={onClose}
       />
       <section className="stage-details" data-lenis-prevent>

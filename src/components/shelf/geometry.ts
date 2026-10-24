@@ -50,7 +50,7 @@ export function createPlankGeometry(
 }
 
 /** A texture tile covers the same area of timber on the top, front and sides. */
-export function setPlankGrainUVs(geometry: THREE.BoxGeometry, width: number, height: number, depth: number) {
+export function setPlankGrainUVs(geometry: THREE.BufferGeometry, width: number, height: number, depth: number) {
   const positions = geometry.getAttribute('position')
   const normals = geometry.getAttribute('normal')
   const uvs = geometry.getAttribute('uv')

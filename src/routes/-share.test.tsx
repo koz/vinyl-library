@@ -11,8 +11,8 @@ const item: CollectionItem = {
 vi.mock('react', async (importOriginal) => ({
   ...await importOriginal<typeof import('react')>(),
   useState: (initial: unknown) => {
-    // CollectionView's pagination/readiness, then VinylShelf's scene/readiness/columns/selection.
-    const states = [50, true, true, null, true, 4, { item, closing: false }]
+    // The page's view, CollectionView's pagination/readiness, then VinylShelf's scene/readiness/columns/selection.
+    const states = ['shelves', true, 50, true, true, null, true, 4, { item, closing: false }]
     return [states[fixture.cursor++] ?? initial, vi.fn()]
   },
 }))
@@ -38,6 +38,7 @@ describe('shared collection playback', () => {
     fixture.cursor = 0
     const html = renderToStaticMarkup(<Component />)
     expect(html).toContain('Shared collection')
+    expect(html).toContain('aria-label="Flip through the crate"')
     expect(html).toContain('role="dialog"')
     expect(html).toContain('aria-label="Listen on Spotify"')
   })

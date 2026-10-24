@@ -15,6 +15,21 @@ import {
   loadCoverBlob,
   prepareTextureMaps,
 } from './textures'
+import {
+  CRATE_ROTATION,
+  FLIP_SECONDS,
+  QUICK_FLIP_SECONDS,
+  crateSleevePose,
+  createCrateModel,
+  fitCrate,
+  moveSlot,
+  pickUp,
+  raisePose,
+  settleSlots,
+  type CrateModel,
+  type CratePose,
+  type CrateSlot,
+} from './crate'
 
 export type SleeveInfo = { id: number; artist: string; title: string; coverUrl: string | null }
 
@@ -40,6 +55,14 @@ const SHELF_TEXTURE_SIZE = 512
 const SELECTED_TEXTURE_SIZE = 1024
 const MAX_RETAINED_SLEEVES = 24
 const RETAINED_ARTWORK_BYTES = 64 * 1024 * 1024
+// Records come out of a crate more slowly: up, clear of the others, then forward. The forward
+// move starts while the lift is still easing off, once the sleeve has cleared its neighbours.
+const CRATE_TRAVEL_SECONDS = 0.6
+const CRATE_LIFT_FRACTION = 0.4
+const CRATE_MOVE_START = 0.26
+const CRATE_LIFT = 1.06
+// Fade the crate only once the record is in front of the scrim, so it is never dimmed with it.
+const CRATE_SCRIM_START = SCRIM_Z + 20
 
 type Pose = { x: number; y: number; z: number; size: number; rx: number; ry: number }
 
@@ -71,6 +94,16 @@ type Selection = {
   artwork: THREE.CanvasTexture<ImageBitmap> | null
 }
 
+type Crate = {
+  element: HTMLElement
+  model: CrateModel
+  slots: Map<HTMLElement, CrateSlot>
+  count: number
+  lastFlip: number
+  /** Flips run at the quick pace until this time, while the visitor flips steadily. */
+  quickUntil: number
+}
+
 type Preview = { disc: THREE.Mesh; material: THREE.MeshPhysicalMaterial; texture: ReturnType<typeof createDiscTexture> }
 
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
@@ -78,6 +111,22 @@ const approach = (current: number, target: number, rate: number, dt: number) =>
   current + (target - current) * (1 - Math.exp(-rate * dt))
 const step = (current: number, target: number, delta: number) =>
   target > current ? Math.min(target, current + delta) : Math.max(target, current - delta)
+
+const scratch = {
+  matrix: new THREE.Matrix4(),
+  local: new THREE.Matrix4(),
+  position: new THREE.Vector3(),
+  quaternion: new THREE.Quaternion(),
+  scale: new THREE.Vector3(),
+  euler: new THREE.Euler(),
+  one: new THREE.Vector3(1, 1, 1),
+  pointer: new THREE.Vector2(),
+  ray: new THREE.Ray(),
+  hit: new THREE.Vector3(),
+}
+const raycaster = new THREE.Raycaster()
+const SLEEVE_BOX = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.0125), new THREE.Vector3(0.5, 1, 0.0125))
+const UNIT_BOX = new THREE.Box3(new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, 0.5))
 
 /**
  * Draws every sleeve and shelf in one fixed, full-viewport canvas. The page lays out invisible
@@ -133,6 +182,7 @@ export class ShelfScene {
   private preview: Preview | null = null
   private previewWarmTimer: ReturnType<typeof setTimeout> | null = null
   private previewWarming: Promise<void> | null = null
+  private crate: Crate | null = null
 
   static async create(canvas: HTMLCanvasElement, onReady: () => void = () => {}): Promise<ShelfScene> {
     const renderer = new WebGPURenderer({ canvas, alpha: true, antialias: true })
@@ -217,6 +267,85 @@ export class ShelfScene {
       this.tracked.delete(element)
       this.deactivate(element)
     }
+  }
+
+  /**
+   * Draws a crate standing at the bottom of `element`. Sleeves given a place with
+   * `arrangeCrate` stand in it instead of over their own elements.
+   */
+  trackCrate(element: HTMLElement): () => void {
+    const model = createCrateModel(this.oak, this.woodNodes)
+    const crate: Crate = { element, model, slots: new Map(), count: 0, lastFlip: -Infinity, quickUntil: 0 }
+    this.crate = crate
+    this.scene.add(model.group)
+    this.wall.visible = false
+    this.requestRender()
+    return () => {
+      if (this.crate !== crate) return
+      this.scene.remove(model.group)
+      model.dispose()
+      this.crate = null
+      this.wall.visible = true
+      this.requestRender()
+    }
+  }
+
+  /**
+   * Gives each sleeve element its place in the crate, counted from the front. `direction` says
+   * whether the visitor flipped forward (1) or back (-1), so the right record is carried over.
+   */
+  arrangeCrate(count: number, offsets: Map<HTMLElement, number>, direction: number) {
+    const crate = this.crate
+    if (!crate) return
+    crate.count = count
+    if (direction) {
+      const now = performance.now()
+      // A flip that follows another still in the air switches to the quick pace until it lands.
+      if (now - crate.lastFlip < FLIP_SECONDS * 1000) crate.quickUntil = now + QUICK_FLIP_SECONDS * 1000
+      crate.lastFlip = now
+    }
+    for (const element of crate.slots.keys()) {
+      if (!offsets.has(element)) crate.slots.delete(element)
+    }
+    for (const [element, offset] of offsets) {
+      const slot = crate.slots.get(element)
+      if (slot) moveSlot(slot, offset, count, direction)
+      else crate.slots.set(element, { offset, slot: offset, velocity: 0, delay: 0, lift: null })
+    }
+    this.requestRender()
+  }
+
+  /** The id of the crate record under a viewport point, unless the crate itself is in the way. */
+  pickCrate(clientX: number, clientY: number): number | null {
+    const crate = this.crate
+    if (!crate || this.selection || !this.viewportReady) return null
+    const bounds = this.canvas.getBoundingClientRect()
+    scratch.pointer.set(
+      (clientX - bounds.left) / bounds.width * 2 - 1,
+      -(clientY - bounds.top) / bounds.height * 2 + 1,
+    )
+    this.scene.updateMatrixWorld()
+    raycaster.setFromCamera(scratch.pointer, this.camera)
+    const distance = (object: THREE.Object3D, box: THREE.Box3) => {
+      scratch.matrix.copy(object.matrixWorld).invert()
+      scratch.ray.copy(raycaster.ray).applyMatrix4(scratch.matrix)
+      if (!scratch.ray.intersectBox(box, scratch.hit)) return Infinity
+      return scratch.hit.applyMatrix4(object.matrixWorld).distanceTo(raycaster.ray.origin)
+    }
+    let nearest = Infinity
+    let id: number | null = null
+    for (const sleeve of this.sleeves.values()) {
+      if (!crate.slots.has(sleeve.element) || !sleeve.group.visible) continue
+      const hit = distance(sleeve.group, SLEEVE_BOX)
+      if (hit < nearest) {
+        nearest = hit
+        id = sleeve.info.id
+      }
+    }
+    for (const board of crate.model.boards) {
+      if (distance(board.mesh, UNIT_BOX) < nearest) return null
+    }
+    return id
   }
 
   /** Draws a wooden shelf plank over `element`. */
@@ -338,6 +467,8 @@ export class ShelfScene {
     for (const sleeve of this.sleeveCache.values()) this.disposeSleeve(sleeve)
     this.sleeveCache.clear()
     for (const element of this.plankCache.keys()) this.disposePlank(element)
+    this.crate?.model.dispose()
+    this.crate = null
     this.sleeveGeometry.dispose()
     this.discGeometry.dispose()
     this.placeholder.dispose()
@@ -633,6 +764,8 @@ export class ShelfScene {
   private update(dt: number): boolean {
     let animating = false
     const instant = this.reducedMotion.matches
+    const crate = this.crate
+    if (crate) animating = this.updateCrate(crate, dt) || animating
 
     for (const sleeve of this.sleeves.values()) {
       const selected = this.selection?.sleeve === sleeve
@@ -642,6 +775,23 @@ export class ShelfScene {
         const target = this.hovered === sleeve.info.id && !this.selection ? 1 : 0
         sleeve.tilt = approach(sleeve.tilt, target, instant ? Infinity : 12, dt)
         if (Math.abs(sleeve.tilt - target) > 0.001) animating = true
+      }
+
+      const slot = crate?.slots.get(sleeve.element)
+      if (crate && !slot && crate.element.contains(sleeve.element)) {
+        // Not yet given a place in the crate.
+        sleeve.group.visible = false
+        continue
+      }
+      if (crate && slot) {
+        const local = crateSleevePose(slot, crate.count, sleeve.tilt, sleeve.info.id)
+        if (selected && this.selection) {
+          animating = this.updateSelection(this.selection, this.rectPose(sleeve.element.getBoundingClientRect(), 0), dt, { crate, local }) || animating
+        } else {
+          sleeve.group.visible = local.visible
+          this.applyCratePose(sleeve.group, crate, local)
+        }
+        continue
       }
 
       const pose = this.rectPose(sleeve.element.getBoundingClientRect(), 0)
@@ -676,9 +826,14 @@ export class ShelfScene {
     return animating
   }
 
-  private updateSelection(selection: Selection, shelfPose: Pose, dt: number): boolean {
+  private updateSelection(
+    selection: Selection,
+    shelfPose: Pose,
+    dt: number,
+    fromCrate?: { crate: Crate; local: CratePose },
+  ): boolean {
     const instant = this.reducedMotion.matches
-    const travelStep = instant ? 1 : dt / TRAVEL_SECONDS
+    const travelStep = instant ? 1 : dt / (fromCrate ? CRATE_TRAVEL_SECONDS : TRAVEL_SECONDS)
     const slideStep = instant ? 1 : dt / SLIDE_SECONDS
 
     if (selection.open) {
@@ -700,23 +855,29 @@ export class ShelfScene {
     front.rx = 0
     front.ry = -0.05
 
-    const t = easeInOut(selection.travel)
-    // Pull straight off the plank before moving toward the stage. Reversing this
-    // path aligns the sleeve with its slot before pushing it back onto the shelf.
-    const pull = easeInOut(Math.min(selection.travel / SHELF_CLEARANCE_FRACTION, 1))
-    const move = easeInOut(Math.max(
-      (selection.travel - SHELF_CLEARANCE_FRACTION) / (1 - SHELF_CLEARANCE_FRACTION),
-      0,
-    ))
-    const arc = Math.sin(Math.PI * move)
-    this.applyPose(selection.sleeve.group, {
-      x: THREE.MathUtils.lerp(shelfPose.x, front.x, move),
-      y: THREE.MathUtils.lerp(shelfPose.y, front.y, move),
-      z: THREE.MathUtils.lerp(shelfPose.z, front.z, pull) + arc * 80,
-      size: THREE.MathUtils.lerp(shelfPose.size, front.size, move),
-      rx: THREE.MathUtils.lerp(shelfPose.rx, front.rx, move),
-      ry: THREE.MathUtils.lerp(shelfPose.ry, front.ry, move) + arc * 0.45,
-    })
+    let t = easeInOut(selection.travel)
+    if (fromCrate) {
+      this.applyCrateSelection(selection, fromCrate.crate, fromCrate.local, front)
+      const z = selection.sleeve.group.position.z
+      t = THREE.MathUtils.clamp((z - CRATE_SCRIM_START) / (FRONT_Z - CRATE_SCRIM_START), 0, 1)
+    } else {
+      // Pull straight off the plank before moving toward the stage. Reversing this
+      // path aligns the sleeve with its slot before pushing it back onto the shelf.
+      const pull = easeInOut(Math.min(selection.travel / SHELF_CLEARANCE_FRACTION, 1))
+      const move = easeInOut(Math.max(
+        (selection.travel - SHELF_CLEARANCE_FRACTION) / (1 - SHELF_CLEARANCE_FRACTION),
+        0,
+      ))
+      const arc = Math.sin(Math.PI * move)
+      this.applyPose(selection.sleeve.group, {
+        x: THREE.MathUtils.lerp(shelfPose.x, front.x, move),
+        y: THREE.MathUtils.lerp(shelfPose.y, front.y, move),
+        z: THREE.MathUtils.lerp(shelfPose.z, front.z, pull) + arc * 80,
+        size: THREE.MathUtils.lerp(shelfPose.size, front.size, move),
+        rx: THREE.MathUtils.lerp(shelfPose.rx, front.rx, move),
+        ry: THREE.MathUtils.lerp(shelfPose.ry, front.ry, move) + arc * 0.45,
+      })
+    }
 
     selection.disc.position.x = SLIDE_DISTANCE * easeInOut(selection.slide)
     // The first/last part of the slide is still entirely inside the sleeve. Keep the
@@ -741,5 +902,56 @@ export class ShelfScene {
     group.position.set(pose.x, pose.y, pose.z)
     group.scale.setScalar(pose.size)
     group.rotation.set(pose.rx, pose.ry, 0)
+  }
+
+  private updateCrate(crate: Crate, dt: number): boolean {
+    const fit = fitCrate(crate.element.getBoundingClientRect(), this.viewport())
+    const group = crate.model.group
+    group.matrix.compose(fit.position, CRATE_ROTATION, scratch.scale.setScalar(fit.scale))
+    group.matrixWorldNeedsUpdate = true
+    crate.model.update(fit.scale, this.scrim.visible ? this.scrim.material.opacity / SCRIM_OPACITY : 0)
+    // Hold the crate still while a record from it is open.
+    if (this.selection && crate.slots.has(this.selection.sleeve.element)) return false
+    return settleSlots(
+      crate.slots.values(), crate.count, dt, this.reducedMotion.matches, performance.now() < crate.quickUntil,
+    )
+  }
+
+  private viewport() {
+    return { width: this.width, height: this.height, distance: this.distance }
+  }
+
+  /** Sets a sleeve's transform from a pose in the crate's own space. */
+  private applyCratePose(group: THREE.Group, crate: Crate, pose: CratePose) {
+    scratch.local.compose(
+      scratch.position.set(pose.x, pose.y, pose.z),
+      scratch.quaternion.setFromEuler(scratch.euler.set(pose.rx, 0, pose.rz)),
+      scratch.one,
+    )
+    scratch.matrix.multiplyMatrices(crate.model.group.matrix, scratch.local)
+    scratch.matrix.decompose(group.position, group.quaternion, group.scale)
+  }
+
+  /** Lifts the record straight out of the crate, clear of its neighbours, then carries it to the stage. */
+  private applyCrateSelection(selection: Selection, crate: Crate, local: CratePose, front: Pose) {
+    const group = selection.sleeve.group
+    const pull = pickUp(Math.min(selection.travel / CRATE_LIFT_FRACTION, 1))
+    const move = easeInOut(Math.max((selection.travel - CRATE_MOVE_START) / (1 - CRATE_MOVE_START), 0))
+    this.applyCratePose(group, crate, raisePose(local, pull * CRATE_LIFT))
+    group.visible = true
+    if (move <= 0) return
+
+    const arc = Math.sin(Math.PI * move)
+    const fromPosition = scratch.hit.copy(group.position)
+    const fromQuaternion = scratch.quaternion.copy(group.quaternion)
+    const fromSize = group.scale.x
+    group.position.lerpVectors(fromPosition, scratch.position.set(front.x, front.y, front.z), move)
+    group.position.z += arc * 80
+    group.quaternion.slerpQuaternions(
+      fromQuaternion,
+      new THREE.Quaternion().setFromEuler(scratch.euler.set(front.rx, front.ry, 0)),
+      move,
+    ).premultiply(new THREE.Quaternion().setFromAxisAngle(THREE.Object3D.DEFAULT_UP, arc * 0.3))
+    group.scale.setScalar(THREE.MathUtils.lerp(fromSize, front.size, move))
   }
 }

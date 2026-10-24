@@ -51,6 +51,22 @@ function expectSpinnerOnly(html: string) {
 
 beforeEach(() => { fixture.cursor = 0 })
 
+describe('view switch', () => {
+  it('sits between refresh and share, showing the view it switches to', () => {
+    const shelves = render([[item], { state: 'idle' }, false, 'shelves', true])
+    const toggle = shelves.indexOf('aria-label="Flip through the crate"')
+    expect(toggle).toBeGreaterThan(shelves.indexOf('aria-label="Refresh collection"'))
+    expect(toggle).toBeLessThan(shelves.indexOf('>Share<'))
+    expect(shelves).toContain('lucide-search')
+    expect(render([[item], { state: 'idle' }, false, 'crate', true])).toContain('aria-label="Show the shelves"')
+  })
+
+  it('stays hidden until there are records to show', () => {
+    expect(render([null, { state: 'importing' }])).not.toContain('button-layout')
+    expect(render([[], { state: 'idle' }])).not.toContain('button-layout')
+  })
+})
+
 describe('first collection loading', () => {
   it('shows the spinner before browser storage has been checked', () => {
     expectSpinnerOnly(render([]))
@@ -101,16 +117,17 @@ describe('first collection loading', () => {
 
   it('shows disconnect once the shelf is ready, including during a background refresh', () => {
     for (const state of ['idle', 'importing']) {
-      // Route, share button, then CollectionView's visible/supported/ready state.
-      const html = render([[item], { state }, false, null, false, null, 50, true, true])
+      // Route, view, share button, then CollectionView's visible/supported/ready state.
+      const html = render([[item], { state }, false, 'shelves', true, null, false, null, 50, true, true])
       expect(html).not.toContain('shelf-spinner')
       expect(html).toContain('Disconnect and delete data')
     }
   })
 
   it('shows disconnect when the shelf falls back to the record list', () => {
-    const html = render([[item], { state: 'idle' }, false, null, false, null, 50, false])
+    const html = render([[item], { state: 'idle' }, false, 'shelves', false, null, false, null, 50, false])
     expect(html).toContain('class="record-list"')
+    expect(html).not.toContain('button-layout')
     expect(html).not.toContain('shelf-spinner')
     expect(html).toContain('Disconnect and delete data')
   })

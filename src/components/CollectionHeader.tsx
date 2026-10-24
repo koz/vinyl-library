@@ -3,6 +3,8 @@ import type { CollectionItem } from '../lib/collection'
 import { ButtonLabel } from './ButtonLabel'
 import { ShareCollection } from './ShareCollection'
 import { RefreshVinylIcon } from './RefreshVinylIcon'
+import { LayoutToggle } from './LayoutToggle'
+import type { ShelfLayout } from './shelf/VinylShelf'
 
 export function CollectionHeader({
   username,
@@ -10,6 +12,8 @@ export function CollectionHeader({
   importing,
   failed = false,
   needsReauth = false,
+  layout,
+  onToggleLayout,
   onRefresh,
   onSignOut,
 }: {
@@ -18,6 +22,9 @@ export function CollectionHeader({
   importing: boolean
   failed?: boolean
   needsReauth?: boolean
+  /** Shows the view switch when set. */
+  layout?: ShelfLayout
+  onToggleLayout?: () => void
   onRefresh: () => void
   onSignOut: () => void
 }) {
@@ -43,6 +50,7 @@ export function CollectionHeader({
         >
           <RefreshVinylIcon />
         </button>
+        {layout && onToggleLayout && <LayoutToggle layout={layout} onToggle={onToggleLayout} />}
         <ShareCollection username={username} items={items} />
         <button className="button" type="button" onClick={onSignOut}>
           <ButtonLabel>Logout</ButtonLabel>

@@ -5,6 +5,7 @@ import { ButtonLabel } from '../components/ButtonLabel'
 import { CollectionHeader } from '../components/CollectionHeader'
 import { CollectionView } from '../components/CollectionView'
 import { InitialImportFailure } from '../components/InitialImportFailure'
+import { useShelfLayout } from '../hooks/useShelfLayout'
 import { sortItems, type ImportedItem } from '../lib/collection'
 import { deleteAllCollections, loadCollection, saveCollection } from '../lib/collection-cache'
 import { deleteSpotifyMatches } from '../lib/spotify'
@@ -35,6 +36,7 @@ function CollectionPage() {
   const [items, setItems] = useState<ImportedItem[] | null>(null)
   const [status, setStatus] = useState<ImportStatus>({ state: 'idle' })
   const [needsReauth, setNeedsReauth] = useState(false)
+  const shelf = useShelfLayout()
   const importRun = useRef(0)
 
   // Discogs can't filter vinyl or sort by artist, so every page is read before the list is replaced.
@@ -109,6 +111,8 @@ function CollectionPage() {
         importing={importing}
         failed={items !== null && status.state === 'failed'}
         needsReauth={needsReauth}
+        layout={items?.length && shelf.available ? shelf.layout : undefined}
+        onToggleLayout={shelf.toggle}
         onRefresh={runImport}
         onSignOut={handleSignOut}
       />
@@ -132,6 +136,8 @@ function CollectionPage() {
           <CollectionView
             items={items}
             emptyMessage="There’s no vinyl in your Discogs collection yet."
+            layout={shelf.layout}
+            onUnsupported={shelf.markUnavailable}
             footer={<DisconnectSection onDisconnect={handleDisconnect} />}
           />
         )}

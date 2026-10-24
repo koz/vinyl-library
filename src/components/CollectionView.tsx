@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { CollectionItem } from '../lib/collection'
-import { VinylShelf } from './shelf/VinylShelf'
+import { VinylShelf, type ShelfLayout } from './shelf/VinylShelf'
 import { LoadingRecords } from './LoadingRecords'
 
 const PAGE_SIZE = 50
 
-export function CollectionView({ items, emptyMessage, footer }: {
+export function CollectionView({ items, emptyMessage, footer, layout = 'shelves', onUnsupported }: {
   items: CollectionItem[] | null
   emptyMessage: string
   footer?: ReactNode
+  layout?: ShelfLayout
+  /** Called when the 3D view cannot run and the plain list is shown instead. */
+  onUnsupported?: () => void
 }) {
   const [visible, setVisible] = useState(PAGE_SIZE)
   const [shelfSupported, setShelfSupported] = useState(true)
@@ -34,6 +37,8 @@ export function CollectionView({ items, emptyMessage, footer }: {
   }, [visible, items?.length])
 
   const loading = items === null || (items.length > 0 && shelfSupported && !shelfReady)
+  // The crate shows one record at a time, so it never needs more pages loaded.
+  const paged = layout === 'shelves'
 
   return (
     <>
@@ -42,14 +47,18 @@ export function CollectionView({ items, emptyMessage, footer }: {
         <p className="empty">{emptyMessage}</p>
       ) : shelfSupported ? (
         <VinylShelf
-          items={items.slice(0, visible)}
-          onUnsupported={() => setShelfSupported(false)}
+          items={paged ? items.slice(0, visible) : items}
+          layout={layout}
+          onUnsupported={() => {
+            setShelfSupported(false)
+            onUnsupported?.()
+          }}
           onReady={() => setShelfReady(true)}
         />
       ) : (
         <RecordList items={items.slice(0, visible)} />
       )}
-      {items && visible < items.length && (
+      {items && (paged || !shelfSupported) && visible < items.length && (
         <div ref={loadMoreRef} className="scroll-sentinel" aria-hidden="true" />
       )}
       {!loading && footer}
