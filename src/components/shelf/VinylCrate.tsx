@@ -1,14 +1,15 @@
 import {
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
   type PointerEvent,
 } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
-import type { CollectionItem } from '../../lib/collection'
+import { ChevronDown, ChevronUp, Search } from 'lucide-react'
+import { findRecord, type CollectionItem } from '../../lib/collection'
 import { crateWindow } from './crate'
 import type { ShelfScene } from './scene'
 
@@ -18,10 +19,13 @@ const WHEEL_STEP = 90
 const FLIP_INTERVAL = 200
 const SWIPE_STEP = 40
 const MAX_QUEUED = 4
+// Waits for a pause in typing before searching.
+const SEARCH_DELAY = 300
 
 /**
  * The collection as records standing in a wooden crate. The wheel, arrow keys or a vertical swipe
- * flip through them; clicking a record (or Enter, for the front one) opens it.
+ * flip through them; clicking a record (or Enter, for the front one) opens it. Typing in the search
+ * field pulls the first record that matches out of the crate and brings it to the front.
  */
 export function VinylCrate({
   items,
@@ -40,13 +44,26 @@ export function VinylCrate({
   const sleeves = useRef(new Map<number, HTMLElement>())
   const [current, setCurrent] = useState(0)
   const [pointing, setPointing] = useState(false)
+  const [query, setQuery] = useState('')
+  const [unmatched, setUnmatched] = useState(false)
+  const [arranged, setArranged] = useState<{ items: CollectionItem[]; order: number[] } | null>(null)
   const direction = useRef(0)
+  const carried = useRef<number | null>(null)
+  const restacking = useRef(false)
   const lastFlip = useRef(-Infinity)
   const count = items.length
+  // The crate's order, as indexes into `items`: alphabetical, except while a record pulled out by
+  // a search is on its way to the front.
+  const order = useMemo(
+    () => arranged?.items === items ? arranged.order : items.map((_, index) => index),
+    [arranged, items],
+  )
   const front = count ? current % count : 0
-  const frontItem = items[front]
+  const frontIndex = order[front] ?? 0
+  const frontItem = items[frontIndex]
   const visible = (count ? crateWindow(count, front) : []).flatMap(({ index, offset }) => {
-    const item = items[index]
+    const at = order[index]
+    const item = at === undefined ? undefined : items[at]
     return item ? [{ item, offset }] : []
   })
 
@@ -82,6 +99,44 @@ export function VinylCrate({
     if (queued.current) drainTimer.current = setTimeout(drain, wait)
   }
 
+  /**
+   * Lifts the record at `index` out of the crate and lowers it in at the front, in front of the
+   * record there. The others keep their places until it has landed (see `restack`).
+   */
+  function pull(index: number) {
+    clearTimeout(drainTimer.current)
+    drainTimer.current = undefined
+    queued.current = 0
+    const ahead = (order.indexOf(index) - front + count) % count
+    const item = items[index]
+    if (count < 2 || !ahead || !item) return
+    const rest = [...order.slice(front), ...order.slice(0, front)]
+    rest.splice(ahead, 1)
+    lastFlip.current = performance.now()
+    // The records it passes over move back to make room, as when flipping back.
+    direction.current = -1
+    carried.current = item.instanceId
+    setArranged({ items, order: [index, ...rest] })
+    setCurrent(0)
+  }
+
+  /**
+   * Puts the records behind the front one back in alphabetical order, so flipping carries on from
+   * it. They change places at once, hidden behind the front record.
+   */
+  function restack() {
+    if (!arranged) return
+    restacking.current = true
+    setArranged(null)
+    setCurrent(frontIndex)
+  }
+
+  function search(text: string) {
+    const index = findRecord(items, text)
+    setUnmatched(index < 0 && text.trim() !== '')
+    if (index >= 0) pull(index)
+  }
+
   function openAt(clientX: number, clientY: number) {
     const id = scene?.pickCrate(clientX, clientY)
     const item = id == null ? undefined : items.find((candidate) => candidate.instanceId === id)
@@ -89,8 +144,13 @@ export function VinylCrate({
   }
 
   // Read by listeners that outlive a render.
-  const latest = useRef({ flip, queueFlip, stageOpen })
-  latest.current = { flip, queueFlip, stageOpen }
+  const latest = useRef({ flip, queueFlip, search, restack, stageOpen })
+  latest.current = { flip, queueFlip, search, restack, stageOpen }
+
+  useEffect(() => {
+    const timer = setTimeout(() => latest.current.search(query), SEARCH_DELAY)
+    return () => clearTimeout(timer)
+  }, [query])
 
   useLayoutEffect(() => {
     if (!scene || !crateRef.current) return
@@ -104,9 +164,19 @@ export function VinylCrate({
       const element = sleeves.current.get(item.instanceId)
       if (element) offsets.set(element, offset)
     }
-    scene.arrangeCrate(count, offsets, direction.current)
+    const pulled = carried.current === null ? undefined : sleeves.current.get(carried.current)
+    if (restacking.current) scene.restackCrate(count, offsets)
+    else scene.arrangeCrate(count, offsets, direction.current, pulled)
     direction.current = 0
-  }, [scene, items, front])
+    carried.current = null
+    restacking.current = false
+  }, [scene, items, order, front])
+
+  // Restacks once a pulled record has landed and the records around it have settled.
+  useEffect(() => {
+    if (!scene || !arranged) return
+    return scene.onCrateRest(() => latest.current.restack())
+  }, [scene, arranged])
 
   useEffect(() => {
     const crate = crateRef.current
@@ -236,13 +306,30 @@ export function VinylCrate({
           </button>
           <p aria-live="polite">
             <span className="crate-caption-title">{frontItem.artist} — {frontItem.title}</span>
-            <span className="muted">{front + 1} of {count}</span>
+            <span className="muted">{frontIndex + 1} of {count}</span>
           </p>
           <button className="button button-icon" type="button" aria-label="Next record" onClick={() => flip(1)} disabled={count < 2}>
             <ChevronDown size={18} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
       )}
+      {/* Below the crate, out of the way of records carried over it. */}
+      <label className="crate-search">
+        <Search size={18} strokeWidth={1.5} aria-hidden="true" />
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Find an artist or album"
+          aria-label="Find an artist or album"
+          aria-invalid={unmatched}
+          aria-describedby="crate-search-status"
+          autoComplete="off"
+          spellCheck={false}
+          enterKeyHint="search"
+        />
+        <span id="crate-search-status" className="muted" role="status">{unmatched ? 'No match' : ''}</span>
+      </label>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  findRecord,
   sortItems,
   toVinylItems,
   formatArtists,
@@ -100,5 +101,36 @@ describe('toVinylItems and sortItems', () => {
       release(5, { artists: [{ name: 'Air' }], title: 'Moon Safari' }),
     ]))
     expect(items.map((i) => i.instanceId)).toEqual([4, 5, 2, 3, 1])
+  })
+})
+
+describe('findRecord', () => {
+  const items = sortItems(toVinylItems([
+    release(1, { artists: [{ name: 'Sigur Rós' }], title: 'Ágætis byrjun' }),
+    release(2, { artists: [{ name: 'Air' }], title: 'Moon Safari' }),
+    release(3, { artists: [{ name: 'Joe Hisaishi', anv: '久石 譲' }], title: 'Kiki' }),
+    release(4, { artists: [{ name: 'Beach House' }], title: 'Bloom' }),
+  ]))
+
+  it('finds the first match alphabetically, by artist or title', () => {
+    // Air's Moon Safari comes before Beach House's Bloom.
+    expect(items[findRecord(items, 'oo')]?.instanceId).toBe(2)
+    expect(items[findRecord(items, 'bloom')]?.instanceId).toBe(4)
+    expect(items[findRecord(items, 'beach')]?.instanceId).toBe(4)
+  })
+
+  it('ignores case, accents and surrounding space', () => {
+    expect(items[findRecord(items, '  sigur ros ')]?.instanceId).toBe(1)
+    expect(items[findRecord(items, 'AGÆTIS')]?.instanceId).toBe(1)
+  })
+
+  it('matches the main name shown under a non-Latin credit', () => {
+    expect(items[findRecord(items, 'hisaishi')]?.instanceId).toBe(3)
+    expect(items[findRecord(items, '久石')]?.instanceId).toBe(3)
+  })
+
+  it('finds nothing for a blank or unmatched query', () => {
+    expect(findRecord(items, '   ')).toBe(-1)
+    expect(findRecord(items, 'zappa')).toBe(-1)
   })
 })

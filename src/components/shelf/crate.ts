@@ -171,14 +171,25 @@ export function crateSleevePose(
 }
 
 /**
- * Gives a record a new place in the crate. Flipping forward (`direction` 1) carries the front
- * record to the back; flipping back (-1) carries the back record to the front.
+ * A record newly kept in the crate, standing at `offset`. A `carried` one comes up from out of
+ * sight behind the others and is carried over them to its place.
  */
-export function moveSlot(slot: CrateSlot, offset: number, count: number, direction: number) {
+export function placeSlot(offset: number, count: number, carried = false): CrateSlot {
+  if (!carried) return { offset, slot: offset, velocity: 0, delay: 0, lift: null }
+  const hidden = lastSlot(count) + 1
+  return { offset, slot: hidden, velocity: 0, delay: 0, lift: { from: hidden, to: offset, t: 0 } }
+}
+
+/**
+ * Gives a record a new place in the crate. Flipping forward (`direction` 1) carries the front
+ * record to the back; flipping back (-1) carries the back record to the front. A `carried` record
+ * is lifted out from wherever it stands, as when it is pulled out to the front.
+ */
+export function moveSlot(slot: CrateSlot, offset: number, count: number, direction: number, carried = false) {
   if (slot.offset === offset) return
-  const wrapped = direction > 0
+  const wrapped = carried || (direction > 0
     ? slot.offset === 0 && offset === count - 1
-    : direction < 0 && slot.offset === count - 1 && offset === 0
+    : direction < 0 && slot.offset === count - 1 && offset === 0)
   if (wrapped) {
     slot.lift = slot.lift
       ? { from: slot.lift.land ?? slot.lift.to, to: offset, t: 1 - slot.lift.t }

@@ -24,6 +24,7 @@ import {
   fitCrate,
   moveSlot,
   pickUp,
+  placeSlot,
   raisePose,
   settleSlots,
   type CrateModel,
@@ -102,6 +103,8 @@ type Crate = {
   lastFlip: number
   /** Flips run at the quick pace until this time, while the visitor flips steadily. */
   quickUntil: number
+  /** Called once every record has come to rest. */
+  onRest?: () => void
 }
 
 type Preview = { disc: THREE.Mesh; material: THREE.MeshPhysicalMaterial; texture: ReturnType<typeof createDiscTexture> }
@@ -293,8 +296,9 @@ export class ShelfScene {
   /**
    * Gives each sleeve element its place in the crate, counted from the front. `direction` says
    * whether the visitor flipped forward (1) or back (-1), so the right record is carried over.
+   * A `carried` sleeve is lifted out from wherever it stands and carried over the others.
    */
-  arrangeCrate(count: number, offsets: Map<HTMLElement, number>, direction: number) {
+  arrangeCrate(count: number, offsets: Map<HTMLElement, number>, direction: number, carried?: HTMLElement) {
     const crate = this.crate
     if (!crate) return
     crate.count = count
@@ -309,10 +313,34 @@ export class ShelfScene {
     }
     for (const [element, offset] of offsets) {
       const slot = crate.slots.get(element)
-      if (slot) moveSlot(slot, offset, count, direction)
-      else crate.slots.set(element, { offset, slot: offset, velocity: 0, delay: 0, lift: null })
+      if (slot) moveSlot(slot, offset, count, direction, element === carried)
+      else crate.slots.set(element, placeSlot(offset, count, element === carried))
     }
     this.requestRender()
+  }
+
+  /**
+   * Puts each sleeve element straight into its new place in the crate, without moving it there:
+   * for reordering the records out of sight behind the front one while the crate is at rest.
+   */
+  restackCrate(count: number, offsets: Map<HTMLElement, number>) {
+    const crate = this.crate
+    if (!crate) return
+    crate.count = count
+    crate.slots.clear()
+    for (const [element, offset] of offsets) crate.slots.set(element, placeSlot(offset, count))
+    this.requestRender()
+  }
+
+  /** Calls `callback` once every record in the crate has come to rest. Returns a cancel function. */
+  onCrateRest(callback: () => void): () => void {
+    const crate = this.crate
+    if (!crate) return () => {}
+    crate.onRest = callback
+    this.requestRender()
+    return () => {
+      if (crate.onRest === callback) crate.onRest = undefined
+    }
   }
 
   /** The id of the crate record under a viewport point, unless the crate itself is in the way. */
@@ -912,9 +940,15 @@ export class ShelfScene {
     crate.model.update(fit.scale, this.scrim.visible ? this.scrim.material.opacity / SCRIM_OPACITY : 0)
     // Hold the crate still while a record from it is open.
     if (this.selection && crate.slots.has(this.selection.sleeve.element)) return false
-    return settleSlots(
+    const moving = settleSlots(
       crate.slots.values(), crate.count, dt, this.reducedMotion.matches, performance.now() < crate.quickUntil,
     )
+    if (!moving && crate.onRest) {
+      const onRest = crate.onRest
+      crate.onRest = undefined
+      onRest()
+    }
+    return moving
   }
 
   private viewport() {

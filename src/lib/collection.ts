@@ -104,3 +104,16 @@ export function toVinylItems(releases: DiscogsCollectionRelease[]): ImportedItem
 export function sortItems(items: ImportedItem[]): ImportedItem[] {
   return [...items].sort(compareItems)
 }
+
+const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('en')
+
+/**
+ * The index of the first record whose artist or title contains `query`, ignoring case and accents,
+ * or -1. Collections are kept sorted by artist, then title, so this is the first match alphabetically.
+ */
+export function findRecord(items: CollectionItem[], query: string): number {
+  const needle = fold(query.trim())
+  if (!needle) return -1
+  return items.findIndex((item) =>
+    [item.artist, item.artistAlt, item.title].some((text) => text !== null && fold(text).includes(needle)))
+}

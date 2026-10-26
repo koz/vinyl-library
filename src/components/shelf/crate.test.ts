@@ -7,6 +7,7 @@ import {
   crateWindow,
   liftPose,
   moveSlot,
+  placeSlot,
   settleSlots,
   slotPose,
   type CrateSlot,
@@ -164,6 +165,63 @@ describe('flipping', () => {
     flip(slots, count, -1)
     expect(settleSlots(slots, count, 1 / 60, true)).toBe(false)
     expect(slots.map((slot) => slot.slot)).toEqual([1, 2, 3, 4, 0])
+  })
+})
+
+describe('pulling a record out to the front', () => {
+  // The record at `from` goes to the front; the ones before it move back a slot to make room.
+  function pull(slots: CrateSlot[], count: number, from: number) {
+    for (const slot of slots) {
+      const offset = slot.offset === from ? 0 : slot.offset < from ? slot.offset + 1 : slot.offset
+      moveSlot(slot, offset, count, -1, slot.offset === from)
+    }
+  }
+
+  // The closest a standing record comes to another, or to the pulled record while it is low enough
+  // to be among them.
+  function closest(slots: CrateSlot[], count: number) {
+    let gap = Infinity
+    const standing = slots.filter((slot) => !slot.lift).map((slot) => slot.slot).sort((a, b) => a - b)
+    for (let i = 1; i < standing.length; i++) gap = Math.min(gap, standing[i]! - standing[i - 1]!)
+    for (const slot of slots) {
+      const lift = slot.lift
+      if (!lift) continue
+      const to = lift.land ?? lift.to
+      if (liftPose(slotPose(lift.from, count), slotPose(to, count), lift.t).y > 1) continue
+      const at = lift.t < 0.5 ? lift.from : to
+      for (const other of standing) gap = Math.min(gap, Math.abs(other - at))
+    }
+    return gap
+  }
+
+  it('lifts the record out from where it stands and lowers it in at the front', () => {
+    const count = 10
+    const slots = stack(count)
+    pull(slots, count, 6)
+    expect(slots[6]).toMatchObject({ offset: 0, lift: { from: 6, to: 0, t: 0 } })
+    for (const slot of slots) if (slot !== slots[6]) expect(slot.lift).toBeNull()
+    for (let i = 0; i < 180; i++) {
+      settleSlots(slots, count, 1 / 60, false)
+      // A sleeve is about 0.9 slots thick, so records closer than that pass through each other.
+      expect(closest(slots, count)).toBeGreaterThan(0.9)
+    }
+    expect(slots.map((slot) => slot.slot)).toEqual([1, 2, 3, 4, 5, 6, 0, 7, 8, 9])
+    for (const slot of slots) expect(slot.lift).toBeNull()
+  })
+
+  it('brings a record from out of sight up from behind the others', () => {
+    const count = CRATE_SLOTS + 20
+    const slots = stack(CRATE_SLOTS)
+    for (const slot of slots) moveSlot(slot, slot.offset + 1, count, -1)
+    const pulled = placeSlot(0, count, true)
+    expect(crateSleevePose(pulled, count, 0).visible).toBe(true)
+    expect(liftPose(slotPose(pulled.lift!.from, count), slotPose(0, count), 0).y).toBeLessThan(slotPose(CRATE_SLOTS - 1, count).y)
+    const all = [...slots, pulled]
+    for (let i = 0; i < 180; i++) {
+      settleSlots(all, count, 1 / 60, false)
+      expect(closest(all, count)).toBeGreaterThan(0.9)
+    }
+    expect(pulled).toMatchObject({ slot: 0, lift: null })
   })
 })
 
