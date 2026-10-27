@@ -5,6 +5,7 @@ import {
   QUICK_FLIP_SECONDS,
   crateSleevePose,
   crateWindow,
+  hidesStack,
   liftPose,
   moveSlot,
   placeSlot,
@@ -207,6 +208,37 @@ describe('pulling a record out to the front', () => {
     }
     expect(slots.map((slot) => slot.slot)).toEqual([1, 2, 3, 4, 5, 6, 0, 7, 8, 9])
     for (const slot of slots) expect(slot.lift).toBeNull()
+  })
+
+  it('waits where it hides the records behind it, even between slow frames', () => {
+    for (const dt of [1 / 60, 1 / 4]) {
+      const count = 10
+      const slots = stack(count)
+      pull(slots, count, 6)
+      const pulled = slots[6]!
+      while (!hidesStack(pulled, count)) settleSlots(slots, count, dt, false)
+      const hiding = pulled.lift!.t
+      // Low enough that the record behind it is out of sight below the front board, and still
+      // well above the floor, so the tops of the others are hidden too.
+      expect(crateSleevePose(pulled, count, 0).y).toBeGreaterThan(slotPose(0, count).y + 0.15)
+      expect(crateSleevePose(pulled, count, 0).y).toBeLessThan(0.3 + 1e-6)
+      if (dt < 0.1) {
+        settleSlots(slots, count, dt, false)
+        expect(pulled.lift!.t).toBe(hiding)
+      }
+      // Released, it carries on down.
+      delete pulled.lift!.hold
+      for (let i = 0; i < 60; i++) settleSlots(slots, count, 1 / 60, false)
+      expect(pulled).toMatchObject({ slot: 0, lift: null })
+    }
+  })
+
+  it('lands on its own if nothing releases it', () => {
+    const count = 10
+    const slots = stack(count)
+    pull(slots, count, 6)
+    for (let i = 0; i < 120; i++) settleSlots(slots, count, 1 / 60, false)
+    expect(slots[6]).toMatchObject({ slot: 0, lift: null })
   })
 
   it('brings a record from out of sight up from behind the others', () => {

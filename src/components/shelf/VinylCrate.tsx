@@ -122,7 +122,7 @@ export function VinylCrate({
 
   /**
    * Puts the records behind the front one back in alphabetical order, so flipping carries on from
-   * it. They change places at once, hidden behind the front record.
+   * it. They change places at once, while the record pulled out to the front hides them.
    */
   function restack() {
     if (!arranged) return
@@ -172,10 +172,10 @@ export function VinylCrate({
     restacking.current = false
   }, [scene, items, order, front])
 
-  // Restacks once a pulled record has landed and the records around it have settled.
+  // Restacks as the pulled record comes down in front of the others, out of their sight.
   useEffect(() => {
     if (!scene || !arranged) return
-    return scene.onCrateRest(() => latest.current.restack())
+    return scene.onCrateRestack(() => latest.current.restack())
   }, [scene, arranged])
 
   useEffect(() => {

@@ -22,6 +22,7 @@ import {
   crateSleevePose,
   createCrateModel,
   fitCrate,
+  hidesStack,
   moveSlot,
   pickUp,
   placeSlot,
@@ -103,8 +104,8 @@ type Crate = {
   lastFlip: number
   /** Flips run at the quick pace until this time, while the visitor flips steadily. */
   quickUntil: number
-  /** Called once every record has come to rest. */
-  onRest?: () => void
+  /** Called once the records behind the front one can be reordered unseen. */
+  onRestack?: () => void
 }
 
 type Preview = { disc: THREE.Mesh; material: THREE.MeshPhysicalMaterial; texture: ReturnType<typeof createDiscTexture> }
@@ -321,25 +322,39 @@ export class ShelfScene {
 
   /**
    * Puts each sleeve element straight into its new place in the crate, without moving it there:
-   * for reordering the records out of sight behind the front one while the crate is at rest.
+   * for reordering the records out of sight behind the front one. A record being lowered in at
+   * the front carries on.
    */
   restackCrate(count: number, offsets: Map<HTMLElement, number>) {
     const crate = this.crate
     if (!crate) return
     crate.count = count
-    crate.slots.clear()
-    for (const [element, offset] of offsets) crate.slots.set(element, placeSlot(offset, count))
+    const slots = new Map<HTMLElement, CrateSlot>()
+    for (const [element, offset] of offsets) {
+      const slot = crate.slots.get(element)
+      if (slot?.lift && slot.offset === offset) {
+        delete slot.lift.hold
+        slots.set(element, slot)
+      } else {
+        slots.set(element, placeSlot(offset, count))
+      }
+    }
+    crate.slots = slots
     this.requestRender()
   }
 
-  /** Calls `callback` once every record in the crate has come to rest. Returns a cancel function. */
-  onCrateRest(callback: () => void): () => void {
+  /**
+   * Calls `callback` once the records behind the front one can be reordered unseen: while a record
+   * pulled out to the front hides them on its way down, or else once the crate is at rest. Returns
+   * a cancel function.
+   */
+  onCrateRestack(callback: () => void): () => void {
     const crate = this.crate
     if (!crate) return () => {}
-    crate.onRest = callback
+    crate.onRestack = callback
     this.requestRender()
     return () => {
-      if (crate.onRest === callback) crate.onRest = undefined
+      if (crate.onRestack === callback) crate.onRestack = undefined
     }
   }
 
@@ -943,10 +958,11 @@ export class ShelfScene {
     const moving = settleSlots(
       crate.slots.values(), crate.count, dt, this.reducedMotion.matches, performance.now() < crate.quickUntil,
     )
-    if (!moving && crate.onRest) {
-      const onRest = crate.onRest
-      crate.onRest = undefined
-      onRest()
+    const hidden = [...crate.slots.values()].some((slot) => slot.lift?.hold !== undefined && hidesStack(slot, crate.count))
+    if ((hidden || !moving) && crate.onRestack) {
+      const onRestack = crate.onRestack
+      crate.onRestack = undefined
+      onRestack()
     }
     return moving
   }

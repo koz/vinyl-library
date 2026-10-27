@@ -42,6 +42,8 @@ const SHIFT_STIFFNESS = 16
 const STAGGER = 0.004
 // A record about to be lowered in waits until its neighbours are at least this far apart, in slots.
 const LANDING_ROOM = 0.95
+// The longest a record pulled out to the front waits where it hides the records behind it.
+const HOLD_SECONDS = 0.2
 
 export const FLIP_SECONDS = 0.7
 // Flipping steadily (a held key, a long scroll), records go quicker and the stack follows faster,
@@ -68,8 +70,10 @@ export type CrateSlot = {
   /**
    * Set while the record is carried over the others to the other end of the crate. Once it starts
    * lowering in, `land` fixes where it comes down; it shuffles along with the others after that.
+   * A record pulled out to the front may wait up to `hold` seconds where it hides the records
+   * behind it, so they can be put back in order unseen.
    */
-  lift: { from: number; to: number; t: number; land?: number } | null
+  lift: { from: number; to: number; t: number; land?: number; hold?: number } | null
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -111,6 +115,20 @@ function riseTime(y: number, peak: number, target: number): number {
     else high = mid
   }
   return high
+}
+
+/**
+ * The point in a flip at which a record lowered in at the front hides the records behind it: its
+ * bottom edge is below the top of the front board, and its top is still above theirs.
+ */
+function hidingTime(count: number): number {
+  return 1 - riseTime(slotPose(0, count).y, FLOOR + LIFT, FRONT_BOARD) / 2
+}
+
+/** Whether `slot` is a record being lowered in at the front, far enough to hide the ones behind. */
+export function hidesStack(slot: CrateSlot, count: number): boolean {
+  const lift = slot.lift
+  return lift?.land === 0 && lift.t >= hidingTime(count)
 }
 
 /**
@@ -177,7 +195,7 @@ export function crateSleevePose(
 export function placeSlot(offset: number, count: number, carried = false): CrateSlot {
   if (!carried) return { offset, slot: offset, velocity: 0, delay: 0, lift: null }
   const hidden = lastSlot(count) + 1
-  return { offset, slot: hidden, velocity: 0, delay: 0, lift: { from: hidden, to: offset, t: 0 } }
+  return { offset, slot: hidden, velocity: 0, delay: 0, lift: { from: hidden, to: offset, t: 0, hold: HOLD_SECONDS } }
 }
 
 /**
@@ -194,6 +212,7 @@ export function moveSlot(slot: CrateSlot, offset: number, count: number, directi
     slot.lift = slot.lift
       ? { from: slot.lift.land ?? slot.lift.to, to: offset, t: 1 - slot.lift.t }
       : { from: slot.slot, to: offset, t: 0 }
+    if (carried) slot.lift.hold = HOLD_SECONDS
   } else if (slot.lift) {
     slot.lift.to = offset
   } else if (slot.slot === slot.offset && slot.velocity === 0 && direction > 0) {
@@ -303,6 +322,15 @@ export function settleSlots(
         || lifts.some((other) => other !== slot && other.lift?.land !== undefined && near(other.lift.land)))
       if (crowded) t = lowering
       else lift.land = lift.to
+    }
+    if (!instant && lift.hold !== undefined && lift.land === 0) {
+      const hiding = hidingTime(count)
+      if (t >= hiding && lift.hold > 0) {
+        t = Math.max(lift.t, hiding)
+        lift.hold -= dt
+      } else if (t >= hiding) {
+        delete lift.hold
+      }
     }
     lift.t = t
     if (t < 1) {
