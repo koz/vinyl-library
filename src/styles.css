@@ -545,7 +545,7 @@ a {
 
 .crate-search {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   width: min(440px, 100%);
@@ -561,7 +561,7 @@ a {
 
 .crate-search input {
   width: 100%;
-  min-height: 40px;
+  min-height: 20px;
   padding: 0;
   border: 0;
   outline: none;

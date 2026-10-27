@@ -8,7 +8,7 @@ import {
   type MouseEvent,
   type PointerEvent,
 } from 'react'
-import { ChevronDown, ChevronUp, Search } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { findRecord, type CollectionItem } from '../../lib/collection'
 import { crateWindow } from './crate'
 import type { ShelfScene } from './scene'
@@ -315,7 +315,6 @@ export function VinylCrate({
       )}
       {/* Below the crate, out of the way of records carried over it. */}
       <label className="crate-search">
-        <Search size={18} strokeWidth={1.5} aria-hidden="true" />
         <input
           type="search"
           value={query}
