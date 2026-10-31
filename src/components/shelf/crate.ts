@@ -243,9 +243,14 @@ function spring(position: number, velocity: number, target: number, dt: number, 
 /**
  * Advances every record towards its place. Records shuffle along together, but none moves into
  * the space of a record that is still being lifted out of it, and a record coming over the top
- * waits in the air until there is room to lower it in. Returns whether anything is moving.
+ * waits in the air until there is room to lower it in. A flip takes `seconds`. Returns whether
+ * anything is moving.
  */
-export function settleSlots(slots: Iterable<CrateSlot>, count: number, dt: number, instant: boolean): boolean {
+export function settleSlots(
+  slots: Iterable<CrateSlot>, count: number, dt: number, instant: boolean, seconds = FLIP_SECONDS,
+): boolean {
+  // Records still shuffling along keep the same pace as the flips.
+  const stiffness = SHIFT_STIFFNESS * FLIP_SECONDS / seconds
   const all = [...slots]
   const hidden = lastSlot(count) + 1
   const peak = FLOOR + LIFT
@@ -259,8 +264,8 @@ export function settleSlots(slots: Iterable<CrateSlot>, count: number, dt: numbe
   // How far through its move a record heading for `offset` should be, keeping pace with `lift`.
   // Closing up at the front, records further back start a little later, so the stack ripples.
   const along = (lift: Lift, offset: number) => {
-    const t = Math.min(1, lift.t + dt / FLIP_SECONDS)
-    const start = clearTime(lift.from, count) + (lift.to > lift.from ? offset * STAGGER / FLIP_SECONDS : 0)
+    const t = Math.min(1, lift.t + dt / seconds)
+    const start = clearTime(lift.from, count) + (lift.to > lift.from ? offset * STAGGER / seconds : 0)
     const end = 1 - riseTime(slotPose(lift.to, count).y, peak, CLEAR_Y) / 2
     return smooth(clamp((t - start) / (end - start), 0, 1))
   }
@@ -275,7 +280,7 @@ export function settleSlots(slots: Iterable<CrateSlot>, count: number, dt: numbe
     if (slot.lift) {
       lifts.push(slot)
       // As of the end of this step, like the records keeping pace with it.
-      if (!instant && slot.lift.t + dt / FLIP_SECONDS < clearTime(slot.lift.from, count)) lifting.push(Math.min(slot.lift.from, hidden))
+      if (!instant && slot.lift.t + dt / seconds < clearTime(slot.lift.from, count)) lifting.push(Math.min(slot.lift.from, hidden))
       if (!instant && slot.lift.land !== undefined) lifting.push(Math.min(slot.lift.land, hidden))
       continue
     }
@@ -300,7 +305,7 @@ export function settleSlots(slots: Iterable<CrateSlot>, count: number, dt: numbe
       } else if (slot.delay > 0) {
         next = slot.slot
       } else {
-        ({ position: next, velocity } = spring(slot.slot, slot.velocity, slot.offset, dt, SHIFT_STIFFNESS))
+        ({ position: next, velocity } = spring(slot.slot, slot.velocity, slot.offset, dt, stiffness))
         if (Math.abs(next - slot.offset) < 0.001 && Math.abs(velocity) < 0.05) {
           next = slot.offset
           velocity = 0
@@ -346,7 +351,7 @@ export function settleSlots(slots: Iterable<CrateSlot>, count: number, dt: numbe
   }
   for (const slot of lifts) {
     const lift = slot.lift!
-    let t = instant ? 1 : Math.min(1, lift.t + dt / FLIP_SECONDS)
+    let t = instant ? 1 : Math.min(1, lift.t + dt / seconds)
     // Hold the record above the others until the records around its place have made room, then
     // lower it in there.
     const lowering = 1 - riseTime(slotPose(lift.to, count).y, peak, CLEAR_Y) / 2
@@ -367,6 +372,15 @@ export function settleSlots(slots: Iterable<CrateSlot>, count: number, dt: numbe
     slot.lift = null
   }
   return animating
+}
+
+// While an arrow key is held, flips pick up speed to half as fast again, reached after three seconds.
+export const HELD_MAX_SPEED = 1.5
+export const HELD_RAMP_SECONDS = 3
+
+/** How fast to flip after an arrow key has been held for `heldFor` seconds, smoothly picking up. */
+export function heldSpeed(heldFor: number): number {
+  return 1 + (HELD_MAX_SPEED - 1) * smooth(clamp(heldFor / HELD_RAMP_SECONDS, 0, 1))
 }
 
 /**

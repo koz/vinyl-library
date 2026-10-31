@@ -10,11 +10,11 @@ import {
 } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { findRecord, type CollectionItem } from '../../lib/collection'
-import { crateWindow } from './crate'
+import { crateWindow, heldSpeed } from './crate'
 import type { ShelfScene } from './scene'
 
 // One flip per wheel notch or swipe. Flips wait their turn, each starting once the record before
-// it has landed and the stack is still, so every flip plays at the same pace.
+// it has landed and the stack is still. Holding an arrow key, they pick up speed.
 const WHEEL_STEP = 90
 const SWIPE_STEP = 40
 const MAX_QUEUED = 4
@@ -47,6 +47,7 @@ export function VinylCrate({
   const [unmatched, setUnmatched] = useState(false)
   const [arranged, setArranged] = useState<{ items: CollectionItem[]; order: number[] } | null>(null)
   const direction = useRef(0)
+  const speed = useRef(1)
   const carried = useRef<number | null>(null)
   const restacking = useRef(false)
   const count = items.length
@@ -80,10 +81,11 @@ export function VinylCrate({
     setCurrent((value) => ((value % count) + step + count) % count)
   }
 
-  // Flips waiting their turn, counted in the direction they go, and whether the one waiting is only
-  // there because a key is held down.
+  // Flips waiting their turn, counted in the direction they go, whether the one waiting is only
+  // there because a key is held down, and since when an arrow key has been down.
   const queued = useRef(0)
   const holding = useRef(false)
+  const heldSince = useRef<number | null>(null)
   const waiting = useRef<(() => void) | undefined>(undefined)
   useEffect(() => () => waiting.current?.(), [])
 
@@ -107,6 +109,7 @@ export function VinylCrate({
 
   /** Letting go of a held key drops the flip it left waiting. */
   function release() {
+    heldSince.current = null
     if (!holding.current) return
     holding.current = false
     queued.current = 0
@@ -120,6 +123,8 @@ export function VinylCrate({
       if (!step) return
       queued.current -= step
       holding.current = false
+      const held = heldSince.current
+      speed.current = held === null ? 1 : heldSpeed((performance.now() - held) / 1000)
       latest.current.flip(step)
     })
   }
@@ -193,8 +198,9 @@ export function VinylCrate({
     }
     const pulled = carried.current === null ? undefined : sleeves.current.get(carried.current)
     if (restacking.current) scene.restackCrate(count, place(visible))
-    else scene.arrangeCrate(count, place(visible), direction.current, pulled, pulling ? place(restacked) : undefined)
+    else scene.arrangeCrate(count, place(visible), direction.current, pulled, pulling ? place(restacked) : undefined, speed.current)
     direction.current = 0
+    speed.current = 1
     carried.current = null
     restacking.current = false
     // The next flip waits for this one to land.
@@ -235,6 +241,7 @@ export function VinylCrate({
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
       event.preventDefault()
       const step = event.key === 'ArrowDown' ? 1 : -1
+      if (!event.repeat || heldSince.current === null) heldSince.current = performance.now()
       // Separate presses each count; a held key's repeats only keep it flipping, one record at a
       // time, until it is let go.
       latest.current.queueFlip(step, event.repeat)

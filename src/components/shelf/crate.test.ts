@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   CRATE_SLOTS,
   FLIP_SECONDS,
+  HELD_MAX_SPEED,
+  HELD_RAMP_SECONDS,
   crateSleevePose,
   crateWindow,
   hidesStack,
+  heldSpeed,
   liftPose,
   moveSlot,
   placeSlot,
@@ -297,8 +300,8 @@ describe('pulling a record out to the front', () => {
 
 describe('flipping one record after another', () => {
   // Mirrors the scene and the crate's queue: the window of records kept loaded, and each of the
-  // `steps` flipped as soon as the crate is still after the one before.
-  function flipInTurn(steps: number[], count = 45) {
+  // `steps` flipped as soon as the crate is still after the one before, each taking `seconds`.
+  function flipInTurn(steps: number[], count = 45, seconds = FLIP_SECONDS) {
     let front = 0
     const slots = new Map<number, CrateSlot>()
     const lifts: { from: number; frames: number }[] = []
@@ -352,7 +355,7 @@ describe('flipping one record after another', () => {
         arrange(step)
       }
       const before = new Map([...slots.values()].map((slot) => [slot, slot.lift?.t]))
-      moving = settleSlots(slots.values(), count, 1 / 60, false)
+      moving = settleSlots(slots.values(), count, 1 / 60, false, seconds)
       for (const [slot, t] of before) if (t !== undefined && slot.lift && slot.lift.t === t) waited++
       if ([...slots.values()].some((slot) => slot.lift)) lifts.at(-1)!.frames++
       measure()
@@ -382,6 +385,18 @@ describe('flipping one record after another', () => {
     })
   }
 
+  it('keeps every flip clear of the others when sped up, taking less time', () => {
+    for (const speed of [1.5, 2, 4]) {
+      for (const steps of Object.values(runs)) {
+        const { lifts, minGap, waited, slots } = flipInTurn(steps, 45, FLIP_SECONDS / speed)
+        for (const { frames } of lifts) expect(Math.abs(frames - FLIP_SECONDS / speed * 60)).toBeLessThanOrEqual(1)
+        expect(minGap).toBeGreaterThan(0.9)
+        expect(waited).toBe(0)
+        for (const slot of slots) expect([slot.lift, slot.slot]).toEqual([null, slot.offset])
+      }
+    }
+  })
+
   it('picks every record up from the very end of the stack', () => {
     for (const steps of Object.values(runs)) {
       const { lifts } = flipInTurn(steps)
@@ -390,6 +405,26 @@ describe('flipping one record after another', () => {
         expect(Math.abs(Math.min(from, CRATE_SLOTS) - end)).toBeLessThan(1e-6)
       })
     }
+  })
+})
+
+describe('speeding up while a key is held', () => {
+  it('starts at the usual pace and smoothly picks up to half as fast again after three seconds', () => {
+    expect(heldSpeed(0)).toBe(1)
+    expect(heldSpeed(HELD_RAMP_SECONDS)).toBe(HELD_MAX_SPEED)
+    expect(heldSpeed(10)).toBe(HELD_MAX_SPEED)
+    expect(FLIP_SECONDS / HELD_MAX_SPEED).toBeCloseTo(0.533)
+    let last = 1
+    let step = 0
+    for (let held = 0.1; held <= 3; held += 0.1) {
+      const speed = heldSpeed(held)
+      expect(speed).toBeGreaterThanOrEqual(last)
+      // Gathering speed gently at first, and easing into the most it allows.
+      if (held < 0.3 || held > 2.7) expect(speed - last).toBeLessThan(0.05)
+      step = Math.max(step, speed - last)
+      last = speed
+    }
+    expect(step).toBeLessThan(0.1)
   })
 })
 
