@@ -34,22 +34,14 @@ const CLEAR_Y = FLOOR + Math.cos(LEAN) + 0.03
 const SINK = 0.28
 const PEEK = 0.05
 const UPRIGHT = 0.06
-/** Fraction of a flip after which a lifted record has cleared its neighbours. */
-const CLEAR = 0.3
 // Records shuffle along on a critically damped spring. Closing up behind a record taken from the
 // front, each starts a moment after the one ahead of it.
 const SHIFT_STIFFNESS = 16
 const STAGGER = 0.004
 // A record about to be lowered in waits until its neighbours are at least this far apart, in slots.
 const LANDING_ROOM = 0.95
-// The longest a record pulled out to the front waits where it hides the records behind it.
-const HOLD_SECONDS = 0.2
 
-export const FLIP_SECONDS = 0.7
-// Flipping steadily (a held key, a long scroll), records go quicker and the stack follows faster,
-// so the front fills in before the next record is picked up.
-export const QUICK_FLIP_SECONDS = 0.36
-const QUICK_STIFFNESS = 30
+export const FLIP_SECONDS = 0.8
 /** Seen straight on from slightly above, like a crate on a low shelf. */
 export const CRATE_ROTATION = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.3, 0, 0))
 // Room above the crate, in sleeve widths, for records being flipped.
@@ -70,17 +62,27 @@ export type CrateSlot = {
   /**
    * Set while the record is carried over the others to the other end of the crate. Once it starts
    * lowering in, `land` fixes where it comes down; it shuffles along with the others after that.
-   * A record pulled out to the front may wait up to `hold` seconds where it hides the records
-   * behind it, so they can be put back in order unseen.
    */
-  lift: { from: number; to: number; t: number; land?: number; hold?: number } | null
+  lift: { from: number; to: number; t: number; land?: number } | null
+  /**
+   * Set while the record moves along in step with `lift`, carried over the others: where it
+   * started from, heading for `to`, and how far through its move it should have been by then.
+   */
+  shift?: { from: number; to: number; lift: Lift; done: number }
 }
+
+type Lift = NonNullable<CrateSlot['lift']>
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 // Eases in and out with no jolt at either end: its acceleration also starts and ends at zero.
 const ease = (t: number) => t ** 4 * (35 - 84 * t + 70 * t * t - 20 * t ** 3)
+// Eases in and out more gently, for short moves.
+const smooth = (t: number) => t * t * (3 - 2 * t)
 // Starts gently, does most of its travel early, then eases to a stop: a hand lifting something.
 export const pickUp = (t: number) => 1 - (1 - t) ** 4 * (1 + 4 * t)
+// Lifting a record to flip it: sets off without a jolt, picks up speed, then eases to a stop at the
+// top. Lowering it in, the same in reverse, so it settles softly.
+const raise = (t: number) => t ** 3 * (20 - 45 * t + 36 * t * t - 10 * t ** 3)
 const lastSlot = (count: number) => Math.max(0, Math.min(count, CRATE_SLOTS) - 1)
 
 /**
@@ -111,10 +113,15 @@ function riseTime(y: number, peak: number, target: number): number {
   let high = 1
   for (let i = 0; i < 24; i++) {
     const mid = (low + high) / 2
-    if (pickUp(mid) < goal) low = mid
+    if (raise(mid) < goal) low = mid
     else high = mid
   }
   return high
+}
+
+/** The point in a flip at which a record lifted from `from` has cleared its neighbours. */
+function clearTime(from: number, count: number): number {
+  return riseTime(slotPose(from, count).y, FLOOR + LIFT, CLEAR_Y) / 2
 }
 
 /**
@@ -141,8 +148,8 @@ export function liftPose(from: CratePose, to: CratePose, t: number): CratePose {
   const peak = FLOOR + LIFT
   const rising = t < 0.5
   const y = rising
-    ? from.y + (peak - from.y) * pickUp(t * 2)
-    : to.y + (peak - to.y) * pickUp((1 - t) * 2)
+    ? from.y + (peak - from.y) * raise(t * 2)
+    : to.y + (peak - to.y) * raise((1 - t) * 2)
   const start = riseTime(from.y, peak, CLEAR_Y) / 2
   const end = 1 - riseTime(to.y, peak, CLEAR_Y) / 2
   const along = clamp((t - start) / (end - start), 0, 1)
@@ -195,7 +202,7 @@ export function crateSleevePose(
 export function placeSlot(offset: number, count: number, carried = false): CrateSlot {
   if (!carried) return { offset, slot: offset, velocity: 0, delay: 0, lift: null }
   const hidden = lastSlot(count) + 1
-  return { offset, slot: hidden, velocity: 0, delay: 0, lift: { from: hidden, to: offset, t: 0, hold: HOLD_SECONDS } }
+  return { offset, slot: hidden, velocity: 0, delay: 0, lift: { from: hidden, to: offset, t: 0 } }
 }
 
 /**
@@ -212,7 +219,6 @@ export function moveSlot(slot: CrateSlot, offset: number, count: number, directi
     slot.lift = slot.lift
       ? { from: slot.lift.land ?? slot.lift.to, to: offset, t: 1 - slot.lift.t }
       : { from: slot.slot, to: offset, t: 0 }
-    if (carried) slot.lift.hold = HOLD_SECONDS
   } else if (slot.lift) {
     slot.lift.to = offset
   } else if (slot.slot === slot.offset && slot.velocity === 0 && direction > 0) {
@@ -237,15 +243,27 @@ function spring(position: number, velocity: number, target: number, dt: number, 
 /**
  * Advances every record towards its place. Records shuffle along together, but none moves into
  * the space of a record that is still being lifted out of it, and a record coming over the top
- * waits in the air until there is room to lower it in. `quick` paces everything for steady
- * flipping. Returns whether anything is moving.
+ * waits in the air until there is room to lower it in. Returns whether anything is moving.
  */
-export function settleSlots(
-  slots: Iterable<CrateSlot>, count: number, dt: number, instant: boolean, quick = false,
-): boolean {
-  const seconds = quick ? QUICK_FLIP_SECONDS : FLIP_SECONDS
-  const stiffness = quick ? QUICK_STIFFNESS : SHIFT_STIFFNESS
+export function settleSlots(slots: Iterable<CrateSlot>, count: number, dt: number, instant: boolean): boolean {
+  const all = [...slots]
   const hidden = lastSlot(count) + 1
+  const peak = FLOOR + LIFT
+  // While records are carried over the others, the stack moves along in step with them: from
+  // when a record has cleared it until that record starts coming down, easing in and out. Room is
+  // made just in time, so no record waits in the air. Records that are not yet coming down, the
+  // longest in the air first:
+  const carried = instant ? [] : all
+    .flatMap(({ lift }) => (lift && lift.land === undefined ? [lift] : []))
+    .sort((a, b) => b.t - a.t)
+  // How far through its move a record heading for `offset` should be, keeping pace with `lift`.
+  // Closing up at the front, records further back start a little later, so the stack ripples.
+  const along = (lift: Lift, offset: number) => {
+    const t = Math.min(1, lift.t + dt / FLIP_SECONDS)
+    const start = clearTime(lift.from, count) + (lift.to > lift.from ? offset * STAGGER / FLIP_SECONDS : 0)
+    const end = 1 - riseTime(slotPose(lift.to, count).y, peak, CLEAR_Y) / 2
+    return smooth(clamp((t - start) / (end - start), 0, 1))
+  }
   let animating = false
   type Entry = { slot: CrateSlot; at: number; next: number; free: number; room: boolean }
   const queue: Entry[] = []
@@ -253,22 +271,36 @@ export function settleSlots(
   // Records being lifted out of the stack keep their place until they clear it, and records being
   // lowered in keep theirs until they are down.
   const lifting: number[] = []
-  for (const slot of slots) {
+  for (const slot of all) {
     if (slot.lift) {
       lifts.push(slot)
-      if (!instant && slot.lift.t < CLEAR) lifting.push(Math.min(slot.lift.from, hidden))
+      // As of the end of this step, like the records keeping pace with it.
+      if (!instant && slot.lift.t + dt / FLIP_SECONDS < clearTime(slot.lift.from, count)) lifting.push(Math.min(slot.lift.from, hidden))
       if (!instant && slot.lift.land !== undefined) lifting.push(Math.min(slot.lift.land, hidden))
       continue
     }
-    // Steady flipping is too quick for a ripple; the stack moves as one.
-    if (instant || quick) slot.delay = 0
+    if (instant) slot.delay = 0
     let next = slot.offset
     let velocity = 0
+    if (instant || slot.slot === slot.offset) delete slot.shift
     if (!instant && slot.slot !== slot.offset) {
-      if (slot.delay > 0) {
+      // Keeps pace with the record longest in the air that still leaves it time to move: the first
+      // to need the room.
+      let shift = slot.shift
+      if (!shift || shift.to !== slot.offset || !carried.includes(shift.lift)) {
+        const lift = carried.find((candidate) => along(candidate, slot.offset) < 1)
+        shift = lift && { from: slot.slot, to: slot.offset, lift, done: along(lift, slot.offset) }
+        slot.shift = shift
+      }
+      if (shift) {
+        const progress = (along(shift.lift, slot.offset) - shift.done) / (1 - shift.done)
+        next = shift.from + (slot.offset - shift.from) * progress
+        velocity = dt > 0 ? (next - slot.slot) / dt : 0
+        slot.delay = 0
+      } else if (slot.delay > 0) {
         next = slot.slot
       } else {
-        ({ position: next, velocity } = spring(slot.slot, slot.velocity, slot.offset, dt, stiffness))
+        ({ position: next, velocity } = spring(slot.slot, slot.velocity, slot.offset, dt, SHIFT_STIFFNESS))
         if (Math.abs(next - slot.offset) < 0.001 && Math.abs(velocity) < 0.05) {
           next = slot.offset
           velocity = 0
@@ -304,15 +336,17 @@ export function settleSlots(
   }
   for (const { slot, next, free, room } of queue) {
     if (slot.delay > 0 && room) slot.delay -= dt
-    // A record held back by its neighbour loses its momentum.
-    if (next !== free) slot.velocity = 0
+    // A record held back by its neighbour loses its momentum, and sets off again from where it is.
+    if (Math.abs(next - free) > 1e-6) {
+      slot.velocity = 0
+      delete slot.shift
+    }
     slot.slot = next
     if (next !== slot.offset) animating = true
   }
-  const peak = FLOOR + LIFT
   for (const slot of lifts) {
     const lift = slot.lift!
-    let t = instant ? 1 : Math.min(1, lift.t + dt / seconds)
+    let t = instant ? 1 : Math.min(1, lift.t + dt / FLIP_SECONDS)
     // Hold the record above the others until the records around its place have made room, then
     // lower it in there.
     const lowering = 1 - riseTime(slotPose(lift.to, count).y, peak, CLEAR_Y) / 2
@@ -322,15 +356,6 @@ export function settleSlots(
         || lifts.some((other) => other !== slot && other.lift?.land !== undefined && near(other.lift.land)))
       if (crowded) t = lowering
       else lift.land = lift.to
-    }
-    if (!instant && lift.hold !== undefined && lift.land === 0) {
-      const hiding = hidingTime(count)
-      if (t >= hiding && lift.hold > 0) {
-        t = Math.max(lift.t, hiding)
-        lift.hold -= dt
-      } else if (t >= hiding) {
-        delete lift.hold
-      }
     }
     lift.t = t
     if (t < 1) {
@@ -350,7 +375,7 @@ export function settleSlots(
  */
 export function crateWindow(count: number, front: number): { index: number; offset: number }[] {
   const ahead = CRATE_SLOTS + 4
-  // Enough for every record still in the air at the quickest pace the crate allows.
+  // Enough for every record still in the air.
   const returning = 8
   const offsets = count <= ahead + returning
     ? Array.from({ length: count }, (_, offset) => offset)

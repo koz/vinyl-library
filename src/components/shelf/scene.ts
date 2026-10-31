@@ -17,8 +17,6 @@ import {
 } from './textures'
 import {
   CRATE_ROTATION,
-  FLIP_SECONDS,
-  QUICK_FLIP_SECONDS,
   crateSleevePose,
   createCrateModel,
   fitCrate,
@@ -101,10 +99,14 @@ type Crate = {
   model: CrateModel
   slots: Map<HTMLElement, CrateSlot>
   count: number
-  lastFlip: number
-  /** Flips run at the quick pace until this time, while the visitor flips steadily. */
-  quickUntil: number
-  /** Called once the records behind the front one can be reordered unseen. */
+  /** Called once nothing in the crate is moving. */
+  onSettle?: () => void
+  /**
+   * Places to switch to once the records behind the front one are out of sight: while the record
+   * `carried` out to the front hides them on its way down, or else once the crate is at rest.
+   */
+  restack?: { offsets: Map<HTMLElement, number>; carried?: HTMLElement }
+  /** Called once the records have switched to their `restack` places. */
   onRestack?: () => void
 }
 
@@ -279,7 +281,7 @@ export class ShelfScene {
    */
   trackCrate(element: HTMLElement): () => void {
     const model = createCrateModel(this.oak, this.woodNodes)
-    const crate: Crate = { element, model, slots: new Map(), count: 0, lastFlip: -Infinity, quickUntil: 0 }
+    const crate: Crate = { element, model, slots: new Map(), count: 0, }
     this.crate = crate
     this.scene.add(model.group)
     this.wall.visible = false
@@ -297,18 +299,17 @@ export class ShelfScene {
   /**
    * Gives each sleeve element its place in the crate, counted from the front. `direction` says
    * whether the visitor flipped forward (1) or back (-1), so the right record is carried over.
-   * A `carried` sleeve is lifted out from wherever it stands and carried over the others.
+   * A `carried` sleeve is lifted out from wherever it stands and carried over the others. The
+   * records then switch to their `restacked` places, if given, as soon as that can't be seen.
    */
-  arrangeCrate(count: number, offsets: Map<HTMLElement, number>, direction: number, carried?: HTMLElement) {
+  arrangeCrate(
+    count: number, offsets: Map<HTMLElement, number>, direction: number, carried?: HTMLElement,
+    restacked?: Map<HTMLElement, number>,
+  ) {
     const crate = this.crate
     if (!crate) return
     crate.count = count
-    if (direction) {
-      const now = performance.now()
-      // A flip that follows another still in the air switches to the quick pace until it lands.
-      if (now - crate.lastFlip < FLIP_SECONDS * 1000) crate.quickUntil = now + QUICK_FLIP_SECONDS * 1000
-      crate.lastFlip = now
-    }
+    crate.restack = restacked && { offsets: restacked, carried: carried ?? crate.restack?.carried }
     for (const element of crate.slots.keys()) {
       if (!offsets.has(element)) crate.slots.delete(element)
     }
@@ -322,31 +323,26 @@ export class ShelfScene {
 
   /**
    * Puts each sleeve element straight into its new place in the crate, without moving it there:
-   * for reordering the records out of sight behind the front one. A record being lowered in at
-   * the front carries on.
+   * for reordering the records out of sight behind the front one. Records already headed for
+   * their new place, like one being lowered in at the front, carry on.
    */
   restackCrate(count: number, offsets: Map<HTMLElement, number>) {
     const crate = this.crate
     if (!crate) return
     crate.count = count
+    crate.restack = undefined
     const slots = new Map<HTMLElement, CrateSlot>()
     for (const [element, offset] of offsets) {
       const slot = crate.slots.get(element)
-      if (slot?.lift && slot.offset === offset) {
-        delete slot.lift.hold
-        slots.set(element, slot)
-      } else {
-        slots.set(element, placeSlot(offset, count))
-      }
+      slots.set(element, slot?.offset === offset ? slot : placeSlot(offset, count))
     }
     crate.slots = slots
     this.requestRender()
   }
 
   /**
-   * Calls `callback` once the records behind the front one can be reordered unseen: while a record
-   * pulled out to the front hides them on its way down, or else once the crate is at rest. Returns
-   * a cancel function.
+   * Calls `callback` once the records have switched to the places given to `arrangeCrate`, or
+   * once the crate is at rest. Returns a cancel function.
    */
   onCrateRestack(callback: () => void): () => void {
     const crate = this.crate
@@ -355,6 +351,20 @@ export class ShelfScene {
     this.requestRender()
     return () => {
       if (crate.onRestack === callback) crate.onRestack = undefined
+    }
+  }
+
+  /**
+   * Calls `callback` once nothing in the crate is moving, as of the next frame drawn: after any
+   * arrangement made before then. Returns a cancel function.
+   */
+  whenCrateSettles(callback: () => void): () => void {
+    const crate = this.crate
+    if (!crate) return () => {}
+    crate.onSettle = callback
+    this.requestRender()
+    return () => {
+      if (crate.onSettle === callback) crate.onSettle = undefined
     }
   }
 
@@ -955,14 +965,20 @@ export class ShelfScene {
     crate.model.update(fit.scale, this.scrim.visible ? this.scrim.material.opacity / SCRIM_OPACITY : 0)
     // Hold the crate still while a record from it is open.
     if (this.selection && crate.slots.has(this.selection.sleeve.element)) return false
-    const moving = settleSlots(
-      crate.slots.values(), crate.count, dt, this.reducedMotion.matches, performance.now() < crate.quickUntil,
-    )
-    const hidden = [...crate.slots.values()].some((slot) => slot.lift?.hold !== undefined && hidesStack(slot, crate.count))
-    if ((hidden || !moving) && crate.onRestack) {
+    const moving = settleSlots(crate.slots.values(), crate.count, dt, this.reducedMotion.matches)
+    // Switching places before this frame is drawn, there is never a frame in which the records
+    // behind the front one could be seen changing.
+    const pulled = crate.restack?.carried && crate.slots.get(crate.restack.carried)
+    if (!moving || (pulled && hidesStack(pulled, crate.count))) {
+      if (crate.restack) this.restackCrate(crate.count, crate.restack.offsets)
       const onRestack = crate.onRestack
       crate.onRestack = undefined
-      onRestack()
+      onRestack?.()
+    }
+    if (!moving && crate.onSettle) {
+      const onSettle = crate.onSettle
+      crate.onSettle = undefined
+      onSettle()
     }
     return moving
   }

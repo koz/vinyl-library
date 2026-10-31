@@ -13,10 +13,9 @@ import { findRecord, type CollectionItem } from '../../lib/collection'
 import { crateWindow } from './crate'
 import type { ShelfScene } from './scene'
 
-// One flip per wheel notch, and a steady pace through trackpad momentum or a held key, slow
-// enough for the stack to close up behind each record before the next is picked up.
+// One flip per wheel notch or swipe. Flips wait their turn, each starting once the record before
+// it has landed and the stack is still, so every flip plays at the same pace.
 const WHEEL_STEP = 90
-const FLIP_INTERVAL = 200
 const SWIPE_STEP = 40
 const MAX_QUEUED = 4
 // Waits for a pause in typing before searching.
@@ -50,10 +49,10 @@ export function VinylCrate({
   const direction = useRef(0)
   const carried = useRef<number | null>(null)
   const restacking = useRef(false)
-  const lastFlip = useRef(-Infinity)
   const count = items.length
   // The crate's order, as indexes into `items`: alphabetical, except while a record pulled out by
   // a search is on its way to the front.
+  const pulling = arranged?.items === items
   const order = useMemo(
     () => arranged?.items === items ? arranged.order : items.map((_, index) => index),
     [arranged, items],
@@ -66,53 +65,78 @@ export function VinylCrate({
     const item = at === undefined ? undefined : items[at]
     return item ? [{ item, offset }] : []
   })
+  // While a pulled record is on its way to the front, the records in the places they take once
+  // they are back in alphabetical order behind it, so the scene can switch to them unseen.
+  const restacked = pulling ? crateWindow(count, frontIndex).flatMap(({ index, offset }) => {
+    const item = items[index]
+    return item ? [{ item, offset }] : []
+  }) : []
+  const shown = new Set(visible.map(({ item }) => item))
+  const kept = [...visible, ...restacked.filter(({ item }) => !shown.has(item))]
 
   function flip(step: number) {
-    const now = performance.now()
-    if (count < 2 || now - lastFlip.current < FLIP_INTERVAL) return
-    lastFlip.current = now
+    if (count < 2) return
     direction.current = step
     setCurrent((value) => ((value % count) + step + count) % count)
   }
 
-  // Wheel notches that arrive faster than records can flip are played out in turn.
+  // Flips waiting their turn, counted in the direction they go, and whether the one waiting is only
+  // there because a key is held down.
   const queued = useRef(0)
-  const drainTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  useEffect(() => () => clearTimeout(drainTimer.current), [])
+  const holding = useRef(false)
+  const waiting = useRef<(() => void) | undefined>(undefined)
+  useEffect(() => () => waiting.current?.(), [])
 
-  function queueFlip(step: number) {
+  /**
+   * Flips a record once the crate is still. Presses and wheel notches add up, a few at most; a
+   * `held` key keeps just one flip waiting, so flipping stops as soon as it is let go. Turning
+   * the other way drops the flips still waiting.
+   */
+  function queueFlip(step: number, held = false) {
+    if (count < 2) return
     if (Math.sign(queued.current) !== step) queued.current = 0
-    queued.current = Math.max(-MAX_QUEUED, Math.min(MAX_QUEUED, queued.current + step))
-    if (drainTimer.current === undefined) drain()
+    if (held) {
+      holding.current ||= !queued.current
+      queued.current ||= step
+    } else {
+      holding.current = false
+      queued.current = Math.max(-MAX_QUEUED, Math.min(MAX_QUEUED, queued.current + step))
+    }
+    drain()
+  }
+
+  /** Letting go of a held key drops the flip it left waiting. */
+  function release() {
+    if (!holding.current) return
+    holding.current = false
+    queued.current = 0
   }
 
   function drain() {
-    drainTimer.current = undefined
-    const step = Math.sign(queued.current)
-    if (!step) return
-    let wait = FLIP_INTERVAL - (performance.now() - lastFlip.current)
-    if (wait <= 0) {
+    if (!scene || waiting.current || !queued.current) return
+    waiting.current = scene.whenCrateSettles(() => {
+      waiting.current = undefined
+      const step = Math.sign(queued.current)
+      if (!step) return
       queued.current -= step
+      holding.current = false
       latest.current.flip(step)
-      wait = FLIP_INTERVAL
-    }
-    if (queued.current) drainTimer.current = setTimeout(drain, wait)
+    })
   }
 
   /**
    * Lifts the record at `index` out of the crate and lowers it in at the front, in front of the
-   * record there. The others keep their places until it has landed (see `restack`).
+   * record there. The others keep their places until it hides them (see `restack`).
    */
   function pull(index: number) {
-    clearTimeout(drainTimer.current)
-    drainTimer.current = undefined
+    waiting.current?.()
+    waiting.current = undefined
     queued.current = 0
     const ahead = (order.indexOf(index) - front + count) % count
     const item = items[index]
     if (count < 2 || !ahead || !item) return
     const rest = [...order.slice(front), ...order.slice(0, front)]
     rest.splice(ahead, 1)
-    lastFlip.current = performance.now()
     // The records it passes over move back to make room, as when flipping back.
     direction.current = -1
     carried.current = item.instanceId
@@ -122,7 +146,7 @@ export function VinylCrate({
 
   /**
    * Puts the records behind the front one back in alphabetical order, so flipping carries on from
-   * it. They change places at once, while the record pulled out to the front hides them.
+   * it. The scene has already switched them, while the record pulled out to the front hid them.
    */
   function restack() {
     if (!arranged) return
@@ -144,8 +168,8 @@ export function VinylCrate({
   }
 
   // Read by listeners that outlive a render.
-  const latest = useRef({ flip, queueFlip, search, restack, stageOpen })
-  latest.current = { flip, queueFlip, search, restack, stageOpen }
+  const latest = useRef({ flip, queueFlip, release, search, restack, stageOpen })
+  latest.current = { flip, queueFlip, release, search, restack, stageOpen }
 
   useEffect(() => {
     const timer = setTimeout(() => latest.current.search(query), SEARCH_DELAY)
@@ -159,20 +183,25 @@ export function VinylCrate({
 
   useLayoutEffect(() => {
     if (!scene) return
-    const offsets = new Map<HTMLElement, number>()
-    for (const { item, offset } of visible) {
-      const element = sleeves.current.get(item.instanceId)
-      if (element) offsets.set(element, offset)
+    const place = (records: typeof visible) => {
+      const offsets = new Map<HTMLElement, number>()
+      for (const { item, offset } of records) {
+        const element = sleeves.current.get(item.instanceId)
+        if (element) offsets.set(element, offset)
+      }
+      return offsets
     }
     const pulled = carried.current === null ? undefined : sleeves.current.get(carried.current)
-    if (restacking.current) scene.restackCrate(count, offsets)
-    else scene.arrangeCrate(count, offsets, direction.current, pulled)
+    if (restacking.current) scene.restackCrate(count, place(visible))
+    else scene.arrangeCrate(count, place(visible), direction.current, pulled, pulling ? place(restacked) : undefined)
     direction.current = 0
     carried.current = null
     restacking.current = false
+    // The next flip waits for this one to land.
+    drain()
   }, [scene, items, order, front])
 
-  // Restacks as the pulled record comes down in front of the others, out of their sight.
+  // Catches up once the scene has restacked the records behind the pulled one.
   useEffect(() => {
     if (!scene || !arranged) return
     return scene.onCrateRestack(() => latest.current.restack())
@@ -206,13 +235,19 @@ export function VinylCrate({
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
       event.preventDefault()
       const step = event.key === 'ArrowDown' ? 1 : -1
-      // Separate presses each count; a held key's repeats only keep the steady pace, so flipping
-      // stops as soon as it is released.
-      if (event.repeat) latest.current.flip(step)
-      else latest.current.queueFlip(step)
+      // Separate presses each count; a held key's repeats only keep it flipping, one record at a
+      // time, until it is let go.
+      latest.current.queueFlip(step, event.repeat)
+    }
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') latest.current.release()
     }
     document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
+    document.addEventListener('keyup', onKeyUp)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('keyup', onKeyUp)
+    }
   }, [])
 
   useEffect(() => {
@@ -240,7 +275,7 @@ export function VinylCrate({
       const distance = drag.y - event.clientY
       if (Math.abs(distance) < SWIPE_STEP) return
       // Swiping up moves on through the crate, like scrolling down.
-      flip(Math.sign(distance))
+      queueFlip(Math.sign(distance))
       drag.y = event.clientY
       drag.moved = true
       return
@@ -295,20 +330,20 @@ export function VinylCrate({
         }}
         onBlur={() => scene?.hover(null)}
       >
-        {visible.map(({ item }) => (
+        {kept.map(({ item }) => (
           <CrateSleeve key={item.instanceId} item={item} scene={scene} sleeves={sleeves.current} />
         ))}
       </div>
       {frontItem && (
         <div className="crate-caption">
-          <button className="button button-icon" type="button" aria-label="Previous record" onClick={() => flip(-1)} disabled={count < 2}>
+          <button className="button button-icon" type="button" aria-label="Previous record" onClick={() => queueFlip(-1)} disabled={count < 2}>
             <ChevronUp size={18} strokeWidth={1.5} aria-hidden="true" />
           </button>
           <p aria-live="polite">
             <span className="crate-caption-title">{frontItem.artist} — {frontItem.title}</span>
             <span className="muted">{frontIndex + 1} of {count}</span>
           </p>
-          <button className="button button-icon" type="button" aria-label="Next record" onClick={() => flip(1)} disabled={count < 2}>
+          <button className="button button-icon" type="button" aria-label="Next record" onClick={() => queueFlip(1)} disabled={count < 2}>
             <ChevronDown size={18} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>

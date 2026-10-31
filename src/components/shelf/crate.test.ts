@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   CRATE_SLOTS,
   FLIP_SECONDS,
-  QUICK_FLIP_SECONDS,
   crateSleevePose,
   crateWindow,
   hidesStack,
@@ -160,6 +159,50 @@ describe('flipping', () => {
     expect(slots.map((slot) => slot.slot)).toEqual([9, 0, 1, 2, 3, 4, 5, 6, 7, 8])
   })
 
+  it('lowers a flipped record in without waiting in the air for room', () => {
+    for (const direction of [1, -1]) {
+      for (const count of [5, 10, CRATE_SLOTS, CRATE_SLOTS + 10]) {
+        for (const dt of [1 / 30, 1 / 60, 1 / 144]) {
+          const slots = stack(count)
+          flip(slots, count, direction)
+          const carried = slots[direction > 0 ? 0 : count - 1]!
+          while (carried.lift) {
+            const t = carried.lift.t
+            settleSlots(slots, count, dt, false)
+            if (carried.lift) expect(carried.lift.t).toBeGreaterThan(t)
+          }
+          expect(carried.slot).toBe(direction > 0 ? count - 1 : 0)
+        }
+      }
+    }
+  })
+
+  it('moves the stack along at the same easy pace either way', () => {
+    const count = 10
+    const dt = 1 / 120
+    const peaks = [1, -1].map((direction) => {
+      const slots = stack(count)
+      flip(slots, count, direction)
+      // The record next to the gap.
+      const watched = slots[direction > 0 ? 1 : 0]!
+      let peak = 0
+      let speed = 0
+      for (let i = 0; i < 120; i++) {
+        const before = watched.slot
+        settleSlots(slots, count, dt, false)
+        const now = Math.abs(watched.slot - before) / dt
+        // Gathering and losing speed gradually, with no kick at the start.
+        expect(Math.abs(now - speed)).toBeLessThan(1)
+        speed = now
+        peak = Math.max(peak, now)
+      }
+      expect(watched.slot).toBe(watched.offset)
+      return peak
+    })
+    for (const peak of peaks) expect(peak).toBeLessThan(6)
+    expect(Math.abs(peaks[0]! - peaks[1]!)).toBeLessThan(0.5)
+  })
+
   it('settles immediately with reduced motion', () => {
     const count = 5
     const slots = stack(count)
@@ -210,35 +253,27 @@ describe('pulling a record out to the front', () => {
     for (const slot of slots) expect(slot.lift).toBeNull()
   })
 
-  it('waits where it hides the records behind it, even between slow frames', () => {
-    for (const dt of [1 / 60, 1 / 4]) {
-      const count = 10
+  it('comes down without stopping, passing where it hides the records behind it', () => {
+    for (const [count, from, dt] of [[10, 6, 1 / 60], [10, 9, 1 / 20], [CRATE_SLOTS, 20, 1 / 144], [CRATE_SLOTS, 2, 1 / 30]] as const) {
       const slots = stack(count)
-      pull(slots, count, 6)
-      const pulled = slots[6]!
-      while (!hidesStack(pulled, count)) settleSlots(slots, count, dt, false)
-      const hiding = pulled.lift!.t
-      // Low enough that the record behind it is out of sight below the front board, and still
-      // well above the floor, so the tops of the others are hidden too.
-      expect(crateSleevePose(pulled, count, 0).y).toBeGreaterThan(slotPose(0, count).y + 0.15)
-      expect(crateSleevePose(pulled, count, 0).y).toBeLessThan(0.3 + 1e-6)
-      if (dt < 0.1) {
+      pull(slots, count, from)
+      const pulled = slots[from]!
+      let hid = false
+      while (pulled.lift) {
+        const t = pulled.lift.t
         settleSlots(slots, count, dt, false)
-        expect(pulled.lift!.t).toBe(hiding)
+        if (pulled.lift) expect(pulled.lift.t).toBeGreaterThan(t)
+        if (hid || !hidesStack(pulled, count)) continue
+        hid = true
+        // The first frame drawn there: low enough that the record behind it is out of sight below
+        // the front board, and still well above the floor, so the tops of the others are hidden too.
+        const { y } = crateSleevePose(pulled, count, 0)
+        expect(y).toBeLessThan(0.3 + 1e-6)
+        if (dt < 0.02) expect(y).toBeGreaterThan(slotPose(0, count).y + 0.15)
       }
-      // Released, it carries on down.
-      delete pulled.lift!.hold
-      for (let i = 0; i < 60; i++) settleSlots(slots, count, 1 / 60, false)
+      expect(hid).toBe(true)
       expect(pulled).toMatchObject({ slot: 0, lift: null })
     }
-  })
-
-  it('lands on its own if nothing releases it', () => {
-    const count = 10
-    const slots = stack(count)
-    pull(slots, count, 6)
-    for (let i = 0; i < 120; i++) settleSlots(slots, count, 1 / 60, false)
-    expect(slots[6]).toMatchObject({ slot: 0, lift: null })
   })
 
   it('brings a record from out of sight up from behind the others', () => {
@@ -250,30 +285,30 @@ describe('pulling a record out to the front', () => {
     expect(liftPose(slotPose(pulled.lift!.from, count), slotPose(0, count), 0).y).toBeLessThan(slotPose(CRATE_SLOTS - 1, count).y)
     const all = [...slots, pulled]
     for (let i = 0; i < 180; i++) {
+      const t = pulled.lift?.t
       settleSlots(all, count, 1 / 60, false)
       expect(closest(all, count)).toBeGreaterThan(0.9)
+      // It never waits in the air for room.
+      if (t !== undefined && pulled.lift) expect(pulled.lift.t).toBeGreaterThan(t)
     }
     expect(pulled).toMatchObject({ slot: 0, lift: null })
   })
 })
 
-describe('flipping steadily', () => {
-  // Mirrors the scene: the window of records kept loaded, and the pace of flips that follow one
-  // another. Like a held key: one flip, a pause before the key repeats, then a flip every
-  // `interval` milliseconds until `holdMs`.
-  function hold(direction: number, interval: number, holdMs: number, repeatDelay = 500) {
-    const count = 45
+describe('flipping one record after another', () => {
+  // Mirrors the scene and the crate's queue: the window of records kept loaded, and each of the
+  // `steps` flipped as soon as the crate is still after the one before.
+  function flipInTurn(steps: number[], count = 45) {
     let front = 0
-    let lastFlip = -Infinity
-    let quickUntil = 0
     const slots = new Map<number, CrateSlot>()
-    const lifts: number[] = []
+    const lifts: { from: number; frames: number }[] = []
     let inFlight = 0
     let dropped = 0
+    // Frames in which a record in the air made no progress.
+    let waited = 0
     // The closest any two records come, in slots, where they could touch: standing records in
     // view, and a record low enough to be among them while it is lifted out or lowered in.
     let minGap = Infinity
-    const visible = (slot: number) => Math.min(slot, CRATE_SLOTS)
     const measure = () => {
       const standing = [...slots.values()].filter((slot) => !slot.lift && slot.slot < CRATE_SLOTS)
         .map((slot) => slot.slot).sort((a, b) => a - b)
@@ -282,18 +317,13 @@ describe('flipping steadily', () => {
         const lift = slot.lift
         if (!lift) continue
         const to = lift.land ?? lift.to
-        const pose = liftPose(slotPose(lift.from, count), slotPose(to, count), lift.t)
-        if (pose.y > 1) continue
-        const at = visible(lift.t < 0.5 ? lift.from : to)
+        if (liftPose(slotPose(lift.from, count), slotPose(to, count), lift.t).y > 1) continue
+        const at = Math.min(lift.t < 0.5 ? lift.from : to, CRATE_SLOTS)
         if (at >= CRATE_SLOTS) continue
         for (const other of standing) minGap = Math.min(minGap, Math.abs(other - at))
       }
     }
-    const arrange = (now: number, step: number) => {
-      if (step) {
-        if (now - lastFlip < FLIP_SECONDS * 1000) quickUntil = now + QUICK_FLIP_SECONDS * 1000
-        lastFlip = now
-      }
+    const arrange = (step: number) => {
       const window = crateWindow(count, front)
       const kept = new Set(window.map(({ index }) => index))
       for (const [index, slot] of slots) {
@@ -309,57 +339,58 @@ describe('flipping steadily', () => {
         }
         const lifting = slot.lift
         moveSlot(slot, offset, count, step)
-        if (!lifting && slot.lift) lifts.push(slot.lift.from)
+        if (!lifting && slot.lift) lifts.push({ from: slot.lift.from, frames: 0 })
       }
     }
-    arrange(0, 0)
-    let nextFlip = 0
-    for (let frame = 0; frame < (holdMs + 1500) * 60 / 1000; frame++) {
-      const now = frame * 1000 / 60
-      if (now >= nextFlip && now < holdMs) {
-        nextFlip = nextFlip === 0 ? repeatDelay : nextFlip + interval
-        front = (front + direction + count) % count
-        arrange(now, direction)
+    arrange(0)
+    const waiting = [...steps]
+    let moving = false
+    for (let frame = 0; frame < 60 * (steps.length + 2); frame++) {
+      const step = moving ? undefined : waiting.shift()
+      if (step !== undefined) {
+        front = (front + step + count) % count
+        arrange(step)
       }
-      settleSlots(slots.values(), count, 1 / 60, false, now < quickUntil)
+      const before = new Map([...slots.values()].map((slot) => [slot, slot.lift?.t]))
+      moving = settleSlots(slots.values(), count, 1 / 60, false)
+      for (const [slot, t] of before) if (t !== undefined && slot.lift && slot.lift.t === t) waited++
+      if ([...slots.values()].some((slot) => slot.lift)) lifts.at(-1)!.frames++
       measure()
       inFlight = Math.max(inFlight, [...slots.values()].filter((slot) => slot.lift).length)
     }
-    return { lifts, inFlight, dropped, minGap, slots: [...slots.values()] }
+    return { lifts, inFlight, dropped, minGap, waited, left: waiting.length, slots: [...slots.values()] }
   }
 
-  for (const direction of [1, -1]) {
-    it(`never lowers or shuffles one record into another (${direction > 0 ? 'down' : 'up'})`, () => {
+  const runs = {
+    forward: Array<number>(12).fill(1),
+    back: Array<number>(12).fill(-1),
+    'changing direction': [1, 1, -1, -1, -1, 1, -1, 1, 1, -1],
+  }
+
+  for (const [name, steps] of Object.entries(runs)) {
+    it(`flips each record in full before the next, at the usual pace (${name})`, () => {
+      const { lifts, inFlight, dropped, minGap, waited, left, slots } = flipInTurn(steps)
+      expect(left).toBe(0)
+      expect(lifts).toHaveLength(steps.length)
+      expect(inFlight).toBe(1)
+      for (const { frames } of lifts) expect(Math.abs(frames - FLIP_SECONDS * 60)).toBeLessThanOrEqual(1)
       // A sleeve is about 0.9 slots thick, so records closer than that pass through each other.
-      for (const [interval, holdMs, repeatDelay] of [[200, 1, 500], [200, 3000, 500], [200, 3000, 200]]) {
-        expect(hold(direction, interval!, holdMs!, repeatDelay).minGap).toBeGreaterThan(0.9)
-      }
+      expect(minGap).toBeGreaterThan(0.9)
+      expect(waited).toBe(0)
+      expect(dropped).toBe(0)
+      for (const slot of slots) expect([slot.lift, slot.slot]).toEqual([null, slot.offset])
     })
   }
 
-  it('never leaves records stuck out of place, even flipping as fast as the wheel allows', () => {
-    for (const direction of [1, -1]) {
-      const { dropped, slots } = hold(direction, 200, 3000, 200)
-      expect(dropped).toBe(0)
-      for (const slot of slots) expect([slot.lift, slot.slot]).toEqual([null, slot.offset])
+  it('picks every record up from the very end of the stack', () => {
+    for (const steps of Object.values(runs)) {
+      const { lifts } = flipInTurn(steps)
+      lifts.forEach(({ from }, i) => {
+        const end = steps[i]! > 0 ? 0 : CRATE_SLOTS
+        expect(Math.abs(Math.min(from, CRATE_SLOTS) - end)).toBeLessThan(1e-6)
+      })
     }
   })
-
-  for (const direction of [1, -1]) {
-    it(`keeps the front filled while an arrow key is held (${direction > 0 ? 'down' : 'up'})`, () => {
-      const { lifts, inFlight, dropped, slots } = hold(direction, 200, 3000)
-      expect(lifts.length).toBeGreaterThan(12)
-      // Every record is picked up from the end of the stack, not from deeper and deeper inside it.
-      const end = direction > 0 ? 0 : 44
-      for (const from of lifts) expect(Math.abs(Math.min(from, CRATE_SLOTS) - Math.min(end, CRATE_SLOTS))).toBeLessThan(0.5)
-      // No record disappears mid-air, and everything comes to rest afterwards.
-      expect(dropped).toBe(0)
-      // Records coming over the top may wait a moment for room, but stay well within the 8 the
-      // crate keeps loaded.
-      expect(inFlight).toBeLessThanOrEqual(6)
-      for (const slot of slots) expect([slot.lift, slot.slot]).toEqual([null, slot.offset])
-    })
-  }
 })
 
 describe('crate window', () => {
