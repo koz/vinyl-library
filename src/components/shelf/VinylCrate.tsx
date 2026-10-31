@@ -12,10 +12,11 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { findRecord, type CollectionItem } from '../../lib/collection'
 import { crateWindow, heldSpeed } from './crate'
 import type { ShelfScene } from './scene'
+import { createWheelGesture } from './wheel-gesture'
 
-// One flip per wheel notch or swipe. Flips wait their turn, each starting once the record before
-// it has landed and the stack is still. Holding an arrow key, they pick up speed.
-const WHEEL_STEP = 90
+// One flip per scroll or swipe. Flips wait their turn, each starting once the record before it has
+// landed and the stack is still; scrolling meanwhile is ignored. Holding an arrow key, they pick up
+// speed.
 const SWIPE_STEP = 40
 const MAX_QUEUED = 4
 // Waits for a pause in typing before searching.
@@ -107,6 +108,11 @@ export function VinylCrate({
     drain()
   }
 
+  /** Whether a record is being flipped, or waiting to be. */
+  function flipping() {
+    return queued.current !== 0 || waiting.current !== undefined || !scene?.isCrateSettled()
+  }
+
   /** Letting go of a held key drops the flip it left waiting. */
   function release() {
     heldSince.current = null
@@ -173,8 +179,8 @@ export function VinylCrate({
   }
 
   // Read by listeners that outlive a render.
-  const latest = useRef({ flip, queueFlip, release, search, restack, stageOpen })
-  latest.current = { flip, queueFlip, release, search, restack, stageOpen }
+  const latest = useRef({ flip, queueFlip, flipping, release, search, restack, stageOpen })
+  latest.current = { flip, queueFlip, flipping, release, search, restack, stageOpen }
 
   useEffect(() => {
     const timer = setTimeout(() => latest.current.search(query), SEARCH_DELAY)
@@ -216,18 +222,14 @@ export function VinylCrate({
   useEffect(() => {
     const crate = crateRef.current
     if (!crate) return
-    let total = 0
+    const gesture = createWheelGesture()
     const onWheel = (event: WheelEvent) => {
       // Leave pinch-zoom to the browser.
       if (event.ctrlKey) return
       event.preventDefault()
       const lines = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 40 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? 800 : 1
-      const delta = event.deltaY * lines
-      if (Math.sign(delta) !== Math.sign(total)) total = 0
-      total += delta
-      const steps = Math.trunc(total / WHEEL_STEP)
-      for (let i = 0; i < Math.abs(steps); i++) latest.current.queueFlip(Math.sign(steps))
-      total -= steps * WHEEL_STEP
+      const step = gesture(event.deltaY * lines, latest.current.flipping())
+      if (step) latest.current.queueFlip(step)
     }
     crate.addEventListener('wheel', onWheel, { passive: false })
     return () => crate.removeEventListener('wheel', onWheel)

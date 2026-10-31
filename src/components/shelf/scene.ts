@@ -102,6 +102,8 @@ type Crate = {
   count: number
   /** How long a flip takes, set by the latest flip. */
   seconds: number
+  /** Whether anything in the crate is still moving, as of the latest frame or flip. */
+  moving: boolean
   /** Called once nothing in the crate is moving. */
   onSettle?: () => void
   /**
@@ -284,7 +286,7 @@ export class ShelfScene {
    */
   trackCrate(element: HTMLElement): () => void {
     const model = createCrateModel(this.oak, this.woodNodes)
-    const crate: Crate = { element, model, slots: new Map(), count: 0, seconds: FLIP_SECONDS }
+    const crate: Crate = { element, model, slots: new Map(), count: 0, seconds: FLIP_SECONDS, moving: false }
     this.crate = crate
     this.scene.add(model.group)
     this.wall.visible = false
@@ -313,7 +315,10 @@ export class ShelfScene {
     const crate = this.crate
     if (!crate) return
     crate.count = count
-    if (direction) crate.seconds = FLIP_SECONDS / speed
+    if (direction) {
+      crate.seconds = FLIP_SECONDS / speed
+      crate.moving = true
+    }
     crate.restack = restacked && { offsets: restacked, carried: carried ?? crate.restack?.carried }
     for (const element of crate.slots.keys()) {
       if (!offsets.has(element)) crate.slots.delete(element)
@@ -357,6 +362,11 @@ export class ShelfScene {
     return () => {
       if (crate.onRestack === callback) crate.onRestack = undefined
     }
+  }
+
+  /** Whether nothing in the crate is moving: no record is being flipped and the stack is still. */
+  isCrateSettled(): boolean {
+    return !this.crate?.moving
   }
 
   /**
@@ -971,6 +981,7 @@ export class ShelfScene {
     // Hold the crate still while a record from it is open.
     if (this.selection && crate.slots.has(this.selection.sleeve.element)) return false
     const moving = settleSlots(crate.slots.values(), crate.count, dt, this.reducedMotion.matches, crate.seconds)
+    crate.moving = moving
     // Switching places before this frame is drawn, there is never a frame in which the records
     // behind the front one could be seen changing.
     const pulled = crate.restack?.carried && crate.slots.get(crate.restack.carried)
