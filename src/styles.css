@@ -262,9 +262,19 @@ a {
 /* Collection page */
 
 .page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
   max-width: 1048px;
   margin: 0 auto;
   padding: 24px 16px 48px;
+}
+
+/* Main fills the rest of the viewport, so a short page still puts its footer at the bottom. */
+.page > main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }
 
 .page-header {
@@ -806,7 +816,8 @@ a {
 
 .page-footer {
   display: grid;
-  margin-top: 48px;
+  margin-top: auto;
+  padding-top: 48px;
 }
 
 .page-footer > .link-button {
